@@ -99,7 +99,7 @@ function handleExportJSON() {
 
     <!-- 无数据提示 -->
     <div v-if="simulation.results.length === 0" class="glass-card p-12 text-center">
-      <BarChart3 :size="48" class="mx-auto mb-4 text-midnight-500" />
+      <BarChart3 :size="48" class="mx-auto mb-4 text-midnight-400" />
       <p class="text-midnight-300 mb-2">暂无模拟结果</p>
       <p class="text-sm text-midnight-400">请先完成模拟运行后查看结果分析</p>
       <router-link to="/" class="strawberry-btn inline-block mt-4">前往配置</router-link>

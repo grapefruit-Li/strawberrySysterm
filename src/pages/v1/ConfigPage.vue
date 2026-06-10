@@ -146,7 +146,7 @@ function startSimulation() {
         <div class="drop-zone flex flex-col items-center gap-2">
           <Upload :size="24" class="text-midnight-400" />
           <p class="text-sm text-midnight-400">拖放 .WTH 文件到此处，或点击选择文件</p>
-          <p class="text-xs text-midnight-500">支持 DSSAT 格式气象文件</p>
+          <p class="text-xs text-midnight-400">支持 DSSAT 格式气象文件</p>
           <input type="file" accept=".WTH,.wth" class="hidden" />
         </div>
       </div>

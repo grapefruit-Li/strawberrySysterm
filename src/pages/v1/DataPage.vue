@@ -34,7 +34,7 @@ function fileTypeColor(type: string): string {
     SPE: 'text-purple-400 bg-purple-500/20',
     ECO: 'text-forest-400 bg-forest-500/20',
   }
-  return map[type] || 'text-midnight-400 bg-midnight-600/30'
+  return map[type] || 'text-midnight-300 bg-midnight-700/30'
 }
 
 /* 导出当前配置 */
@@ -89,7 +89,7 @@ function handleExportConfig() {
           >
             <FolderOpen :size="32" class="mx-auto mb-2 text-midnight-400" />
             <p class="text-sm text-midnight-300">拖放文件到此处，或点击选择</p>
-            <p class="text-xs text-midnight-500 mt-1">
+            <p class="text-xs text-midnight-400 mt-1">
               支持 .WTH .SOL .CUL .SPE .ECO 格式
             </p>
             <input

@@ -207,7 +207,7 @@ function getLogColor(type: string) {
             <component :is="getLogIcon(log.type)" :size="14" :class="getLogColor(log.type)" class="mt-0.5 shrink-0" />
             <div class="min-w-0">
               <p class="text-xs text-midnight-200">{{ log.message }}</p>
-              <p class="text-xs text-midnight-500">{{ log.time }}</p>
+              <p class="text-xs text-midnight-400">{{ log.time }}</p>
             </div>
           </div>
           <div v-if="simulation.eventLog.length === 0" class="text-center py-8 text-midnight-400">
