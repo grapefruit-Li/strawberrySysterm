@@ -16,6 +16,15 @@ import {
   builtInCultivars,
   builtInEcotypes,
 } from '@/data/cultivars/florida-cultivars'
+import { strawberryCultivars } from '@/data/cultivars/strawberry-cultivars'
+import {
+  floridaBalmRegion,
+  californiaSalinasRegion,
+  shanghaiRegion,
+  kunmingRegion,
+  builtInRegions,
+  generateWeather,
+} from '@/data/regions'
 
 // 统一导出所有内置数据
 export {
@@ -27,6 +36,13 @@ export {
   floridaShortDayEcotype,
   builtInCultivars,
   builtInEcotypes,
+  strawberryCultivars,
+  floridaBalmRegion,
+  californiaSalinasRegion,
+  shanghaiRegion,
+  kunmingRegion,
+  builtInRegions,
+  generateWeather,
 }
 
 /**

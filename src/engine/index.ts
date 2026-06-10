@@ -21,6 +21,13 @@ export type {
   HarvestRecord,
   SimulationSummary,
   SimulationResult,
+  RegionConfig,
+  CultivarFullParams,
+  RiskLevel,
+  PestRiskRecord,
+  FarmOperation,
+  PhenologyEvent,
+  ChainSimulationResult,
 } from './types';
 
 export { GrowthStage } from './types';
@@ -108,3 +115,13 @@ export {
   createSimulationRunner,
   runSimulation,
 } from './runner';
+
+// 病虫害风险预测模块
+export {
+  calculatePestRisks,
+} from './pest-risk';
+
+// 农事操作建议模块
+export {
+  generateFarmOperations,
+} from './farm-operations';
