@@ -73,7 +73,7 @@ const currentPageTitle = computed(() => {
     >
       <!-- 品牌 Logo -->
       <div class="flex items-center gap-3 px-4 h-16 border-b border-midnight-600/30 shrink-0">
-        <span class="text-2xl shrink-0"></span>
+        <span class="text-2xl shrink-0">🍓</span>
         <transition name="fade">
           <span
             v-if="!sidebarCollapsed"

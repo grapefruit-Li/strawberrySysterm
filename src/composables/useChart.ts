@@ -831,21 +831,21 @@ export function useChart() {
     }
   }
 
-  /* 环形图选项 - 头茬/二茬比例 */
+  /* 环形图选项 - 头茬/二茬比例（深色主题） */
   function donutChartOption(data: { name: string; value: number; color: string }[]) {
     return {
-      ...lightChartTheme,
+      ...chartTheme,
       title: { show: false },
       tooltip: {
         trigger: 'item' as const,
-        backgroundColor: 'rgba(255,255,255,0.95)',
-        borderColor: '#E5E7EB',
-        textStyle: { color: '#374151' },
+        backgroundColor: 'rgba(26, 27, 46, 0.9)',
+        borderColor: 'rgba(45, 49, 66, 0.5)',
+        textStyle: { color: '#F3F4F6' },
       },
       legend: {
         bottom: 0,
         left: 'center',
-        textStyle: { color: '#374151' },
+        textStyle: { color: '#9CA3AF' },
       },
       series: [
         {
@@ -856,24 +856,25 @@ export function useChart() {
           avoidLabelOverlap: false,
           itemStyle: {
             borderRadius: 6,
-            borderColor: '#fff',
+            borderColor: 'rgba(26, 27, 46, 0.8)',
             borderWidth: 2,
           },
           label: {
             show: true,
             position: 'outside' as const,
             formatter: '{b}\n{c} t/ha\n{d}%',
-            color: '#374151',
+            color: '#D1D5DB',
           },
           labelLine: {
             show: true,
-            lineStyle: { color: '#D1D5DB' },
+            lineStyle: { color: '#4B5563' },
           },
           emphasis: {
             label: {
               show: true,
               fontSize: 14,
               fontWeight: 'bold',
+              color: '#F3F4F6',
             },
           },
           data: data.map(d => ({

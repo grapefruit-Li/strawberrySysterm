@@ -53,12 +53,6 @@ const v2Manual = `# V2 使用手册
 ## 概述
 版本二（决策引擎模式）是链式决策系统，将物候、产量、病虫害、农事操作串联，提供从预测到行动的完整闭环。
 
-## 设计主题
-- 主背景：浅灰色
-- 侧边栏：深紫色渐变
-- 卡片：白色背景 + 柔和阴影
-- 顶部栏：白色，与侧边栏形成对比
-
 ## 页面功能
 
 ### 1. 基础信息
@@ -128,12 +122,12 @@ const renderedContent = computed(() => {
   return currentContent.value
     .split('\n')
     .map(line => {
-      if (line.startsWith('## ')) return `<h2 class="text-lg font-bold text-gray-800 mt-6 mb-3">${line.slice(3)}</h2>`
-      if (line.startsWith('# ')) return `<h1 class="text-xl font-bold text-gray-900 mt-0 mb-4">${line.slice(2)}</h1>`
-      if (line.startsWith('- ')) return `<li class="ml-4 text-gray-600">${line.slice(2)}</li>`
-      if (line.startsWith('### ')) return `<h3 class="text-base font-semibold text-gray-700 mt-4 mb-2">${line.slice(4)}</h3>`
+      if (line.startsWith('## ')) return `<h2 class="text-lg font-bold text-midnight-100 mt-6 mb-3">${line.slice(3)}</h2>`
+      if (line.startsWith('# ')) return `<h1 class="text-xl font-bold text-midnight-50 mt-0 mb-4">${line.slice(2)}</h1>`
+      if (line.startsWith('- ')) return `<li class="ml-4 text-midnight-300">${line.slice(2)}</li>`
+      if (line.startsWith('### ')) return `<h3 class="text-base font-semibold text-midnight-200 mt-4 mb-2">${line.slice(4)}</h3>`
       if (line.trim() === '') return '<br>'
-      return `<p class="text-sm text-gray-600 leading-relaxed">${line}</p>`
+      return `<p class="text-sm text-midnight-300 leading-relaxed">${line}</p>`
     })
     .join('')
 })
@@ -147,39 +141,39 @@ const renderedContent = computed(() => {
     >
       <!-- 遮罩 -->
       <div
-        class="absolute inset-0 bg-black/30 transition-opacity duration-300"
+        class="absolute inset-0 bg-black/50 transition-opacity duration-300"
         @click="close"
       ></div>
 
       <!-- 抽屉面板 -->
-      <div class="relative w-1/2 h-full bg-white shadow-2xl flex flex-col overflow-hidden">
+      <div class="relative w-1/2 h-full bg-midnight-800 shadow-2xl flex flex-col overflow-hidden border-l border-midnight-600/30">
         <!-- 头部 -->
-        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-midnight-600/30 shrink-0">
           <div class="flex items-center gap-3">
-            <BookOpen :size="20" class="text-purple-600" />
-            <h2 class="text-lg font-bold text-gray-800">使用手册</h2>
+            <BookOpen :size="20" class="text-strawberry-400" />
+            <h2 class="text-lg font-bold text-midnight-50">使用手册</h2>
             <span
               class="text-xs px-2 py-0.5 rounded-full"
-              :class="activeVersion === 'v1' ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-700'"
+              :class="activeVersion === 'v1' ? 'bg-forest-500/20 text-forest-300' : 'bg-strawberry-500/20 text-strawberry-300'"
             >
               {{ activeVersion === 'v1' ? '版本一' : '版本二' }}
             </span>
           </div>
           <button
-            class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            class="p-2 rounded-lg text-midnight-400 hover:text-midnight-200 hover:bg-midnight-700/40 transition-colors"
             @click="close"
           >
-            <X :size="18" class="text-gray-500" />
+            <X :size="18" />
           </button>
         </div>
 
         <!-- 版本切换 -->
-        <div class="flex gap-2 px-6 py-3 border-b border-gray-100 shrink-0">
+        <div class="flex gap-2 px-6 py-3 border-b border-midnight-700/30 shrink-0">
           <button
             class="px-4 py-1.5 rounded-full text-sm font-medium transition-all"
             :class="activeVersion === 'v1'
-              ? 'bg-purple-100 text-purple-700'
-              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'"
+              ? 'bg-forest-500/20 text-forest-300'
+              : 'bg-midnight-700/40 text-midnight-400 hover:bg-midnight-700/60'"
             @click="switchVersion('v1')"
           >
             版本一 · 模拟器
@@ -187,8 +181,8 @@ const renderedContent = computed(() => {
           <button
             class="px-4 py-1.5 rounded-full text-sm font-medium transition-all"
             :class="activeVersion === 'v2'
-              ? 'bg-red-100 text-red-700'
-              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'"
+              ? 'bg-strawberry-500/20 text-strawberry-300'
+              : 'bg-midnight-700/40 text-midnight-400 hover:bg-midnight-700/60'"
             @click="switchVersion('v2')"
           >
             版本二 · 决策引擎
@@ -198,7 +192,7 @@ const renderedContent = computed(() => {
         <!-- 内容区 -->
         <div class="flex-1 overflow-y-auto p-6">
           <div
-            class="text-sm text-gray-700"
+            class="text-sm"
             v-html="renderedContent"
           ></div>
         </div>
