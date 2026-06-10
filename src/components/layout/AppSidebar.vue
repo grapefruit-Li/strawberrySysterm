@@ -3,10 +3,10 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   Settings,
-  Play,
-  BarChart3,
-  Leaf,
-  Database,
+  CalendarDays,
+  Shield,
+  Sprout,
+  TrendingUp,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-vue-next'
@@ -25,11 +25,11 @@ const route = useRoute()
 
 /* 导航项配置 */
 const navItems = [
-  { path: '/', label: '配置', icon: Settings },
-  { path: '/simulation', label: '模拟', icon: Play },
-  { path: '/results', label: '结果', icon: BarChart3 },
-  { path: '/cultivars', label: '品种库', icon: Leaf },
-  { path: '/data', label: '数据', icon: Database },
+  { path: '/', label: '基础信息', icon: Settings },
+  { path: '/phenology', label: '物候方案', icon: CalendarDays },
+  { path: '/pest', label: '植保IPM', icon: Shield },
+  { path: '/operations', label: '农事操作', icon: Sprout },
+  { path: '/yield', label: '产量预测', icon: TrendingUp },
 ]
 
 /* 判断当前路由是否激活 */

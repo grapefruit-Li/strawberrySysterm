@@ -1,38 +1,38 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-/* 路由配置 */
+/* 路由配置 - 5页结构 */
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
       path: '/',
-      name: 'config',
-      component: () => import('@/pages/ConfigPage.vue'),
-      meta: { title: '模拟配置' },
+      name: 'basic-info',
+      component: () => import('@/pages/BasicInfoPage.vue'),
+      meta: { title: '基础信息' },
     },
     {
-      path: '/simulation',
-      name: 'simulation',
-      component: () => import('@/pages/SimulationPage.vue'),
-      meta: { title: '模拟运行' },
+      path: '/phenology',
+      name: 'phenology',
+      component: () => import('@/pages/PhenologyPage.vue'),
+      meta: { title: '物候方案' },
     },
     {
-      path: '/results',
-      name: 'results',
-      component: () => import('@/pages/ResultsPage.vue'),
-      meta: { title: '结果分析' },
+      path: '/pest',
+      name: 'pest',
+      component: () => import('@/pages/PestPage.vue'),
+      meta: { title: '植保IPM' },
     },
     {
-      path: '/cultivars',
-      name: 'cultivars',
-      component: () => import('@/pages/CultivarsPage.vue'),
-      meta: { title: '品种参数库' },
+      path: '/operations',
+      name: 'operations',
+      component: () => import('@/pages/OperationsPage.vue'),
+      meta: { title: '农事操作' },
     },
     {
-      path: '/data',
-      name: 'data',
-      component: () => import('@/pages/DataPage.vue'),
-      meta: { title: '数据管理' },
+      path: '/yield',
+      name: 'yield',
+      component: () => import('@/pages/YieldPage.vue'),
+      meta: { title: '产量预测' },
     },
   ],
 })

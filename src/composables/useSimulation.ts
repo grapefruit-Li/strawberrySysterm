@@ -15,6 +15,13 @@ import type {
   HarvestRecord,
   PlantState,
   SoilState,
+  ChainSimulationResult,
+  PhenologyEvent,
+  PestRiskRecord,
+  FarmOperation,
+  RiskLevel,
+  OperationType,
+  OperationPriority,
 } from '@/engine/types'
 
 /** 模拟运行器返回类型 */
@@ -41,6 +48,14 @@ export function useSimulation() {
     const month = Math.floor((dateNum % 10000) / 100) - 1
     const day = dateNum % 100
     return new Date(year, month, day)
+  }
+
+  /**
+   * YYYYMMDD数字转日期字符串 "YYYY-MM-DD"
+   */
+  function formatDateNum(dateNum: number): string {
+    const s = String(dateNum)
+    return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`
   }
 
   /**
@@ -321,6 +336,239 @@ export function useSimulation() {
     }
   }
 
+  // ==================== 物候事件生成 ====================
+
+  /**
+   * 从模拟输出中生成物候事件
+   */
+  function generatePhenologyEvents(outputs: DailyOutput[]): PhenologyEvent[] {
+    if (outputs.length === 0) return []
+
+    /* 阶段定义 */
+    const stageDefs: { stage: GrowthStage; name: string; desc: string; env: string; gddRange: [number, number] }[] = [
+      { stage: GrowthStage.Germinating, name: '萌芽期', desc: '种子萌发至出苗', env: '温度>7°C，土壤湿润', gddRange: [0, 50] },
+      { stage: GrowthStage.Vegetative, name: '营养生长期', desc: '叶片和根系快速生长', env: '温度15-25°C，充足光照', gddRange: [50, 500] },
+      { stage: GrowthStage.Flowering, name: '花芽分化期', desc: '花芽分化至开花', env: '短日型需<12h日照，温度15-20°C', gddRange: [500, 700] },
+      { stage: GrowthStage.Fruiting, name: '结果期', desc: '授粉后果实发育', env: '温度18-25°C，适度灌溉', gddRange: [700, 1000] },
+      { stage: GrowthStage.Maturity, name: '果实膨大期', desc: '果实快速膨大，糖分积累', env: '充足光照，昼夜温差大', gddRange: [1000, 1200] },
+      { stage: GrowthStage.Harvest, name: '采收期', desc: '果实成熟采收', env: '避免过多水分，减少病害', gddRange: [1200, 2000] },
+    ]
+
+    const events: PhenologyEvent[] = []
+
+    for (const def of stageDefs) {
+      /* 找到该阶段的起止日期 */
+      const stageOutputs = outputs.filter(o => o.stage === def.stage)
+      if (stageOutputs.length === 0) continue
+
+      const first = stageOutputs[0]
+      const last = stageOutputs[stageOutputs.length - 1]
+
+      events.push({
+        id: `phen-${def.stage}`,
+        stage: def.stage,
+        name: def.name,
+        startDate: first.day,
+        endDate: last.day,
+        predictedDate: formatDateNum(first.day),
+        startGdd: first.gdd, endGdd: last.gdd,
+        duration: last.das - first.das + 1,
+        description: def.desc, envRequirements: def.env,
+      })
+    }
+
+    return events
+  }
+
+  // ==================== 病虫害风险生成 ====================
+
+  /**
+   * 生成病虫害风险数据
+   */
+  function generatePestRisks(outputs: DailyOutput[], events: PhenologyEvent[]): PestRiskRecord[] {
+    /* 病虫害模板 */
+    const pestTemplates = [
+      {
+        id: 'pest-01',
+        name: '灰霉病',
+        scientificName: 'Botrytis cinerea',
+        relatedStages: ['开花期', '结果期', '果实膨大期', '采收期'],
+        desc: '高湿条件下易发，危害花和果实',
+        control: '降低棚内湿度，及时摘除病果，喷施嘧霉胺',
+        prevention: ['保持通风', '控制灌溉量', '及时清除病残体'],
+      },
+      {
+        id: 'pest-02',
+        name: '白粉病',
+        scientificName: 'Podosphaera aphanis',
+        relatedStages: ['营养生长期', '花芽分化期', '开花期'],
+        desc: '干燥条件下易发，危害叶片和果实',
+        control: '喷施硫磺制剂或三唑类杀菌剂',
+        prevention: ['选用抗病品种', '合理密植', '保持叶片干燥'],
+      },
+      {
+        id: 'pest-03',
+        name: '红蜘蛛',
+        scientificName: 'Tetranychus urticae',
+        relatedStages: ['营养生长期', '结果期', '果实膨大期'],
+        desc: '高温干燥条件下易发，吸食叶片汁液',
+        control: '释放捕食螨，喷施阿维菌素',
+        prevention: ['监测虫口密度', '保持适度湿度', '释放天敌'],
+      },
+      {
+        id: 'pest-04',
+        name: '蚜虫',
+        scientificName: 'Chaetosiphon fragaefolii',
+        relatedStages: ['营养生长期', '开花期'],
+        desc: '刺吸式害虫，传播病毒病',
+        control: '喷施吡虫啉或噻虫嗪，悬挂黄板',
+        prevention: ['悬挂黄色粘虫板', '保护瓢虫等天敌', '清除周边杂草'],
+      },
+      {
+        id: 'pest-05',
+        name: '炭疽病',
+        scientificName: 'Colletotrichum spp.',
+        relatedStages: ['结果期', '果实膨大期', '采收期'],
+        desc: '高温多雨条件下易发，危害果实和匍匐茎',
+        control: '喷施咪鲜胺或苯醚甲环唑',
+        prevention: ['避免连作', '及时排水', '选用无病苗'],
+      },
+    ]
+
+    const risks: PestRiskRecord[] = []
+
+    for (const tmpl of pestTemplates) {
+      /* 生成逐日风险指数 */
+      const dailyRiskIndex = outputs.map(o => {
+        const stageName = stageNameFromGrowthStage(o.stage)
+        const isRelated = tmpl.relatedStages.includes(stageName)
+        let baseRisk = isRelated ? 30 + Math.random() * 40 : 5 + Math.random() * 15
+        if (o.tmax > 28 && o.rain > 5) baseRisk += 15
+        if (o.rain > 15) baseRisk += 10
+        return {
+          date: String(o.day),
+          index: Math.min(100, Math.round(baseRisk)),
+        }
+      })
+
+      /* 当前风险指数 */
+      const currentRiskIndex = dailyRiskIndex.length > 0
+        ? dailyRiskIndex[dailyRiskIndex.length - 1].index
+        : 0
+
+      let riskLevel: RiskLevel = 'low'
+      if (currentRiskIndex >= 75) riskLevel = 'critical'
+      else if (currentRiskIndex >= 55) riskLevel = 'high'
+      else if (currentRiskIndex >= 35) riskLevel = 'medium'
+
+      /* 下次高风险日期 */
+      const futureHighRisk = dailyRiskIndex.find(d => d.index >= 55)
+      const nextAlertDate = futureHighRisk ? futureHighRisk.date : '-'
+
+      /* 关联阶段 */
+      const matchedEvent = events.find(e => tmpl.relatedStages.includes(e.name))
+      const relatedStage = matchedEvent ? matchedEvent.name : tmpl.relatedStages.join('、')
+
+      risks.push({
+        id: tmpl.id,
+        name: tmpl.name,
+        scientificName: tmpl.scientificName,
+        riskLevel,
+        riskIndex: currentRiskIndex,
+        relatedStage,
+        description: tmpl.desc,
+        controlRecommendation: tmpl.control,
+        preventionMeasures: tmpl.prevention,
+        dailyRiskIndex,
+        nextAlertDate,
+      })
+    }
+
+    return risks
+  }
+
+  // ==================== 农事操作生成 ====================
+
+  /**
+   * 生成农事操作建议
+   */
+  function generateFarmOperations(outputs: DailyOutput[], events: PhenologyEvent[]): FarmOperation[] {
+    const operations: FarmOperation[] = []
+
+    /* 根据物候阶段生成操作建议 */
+    const stageOps: { stage: GrowthStage; ops: { type: OperationType; name: string; desc: string; priority: OperationPriority; params: Record<string, number | string> }[] }[] = [
+      {
+        stage: GrowthStage.Germinating,
+        ops: [
+          { type: 'irrigation', name: '定植水灌溉', desc: '定植后立即浇透水，确保根系与土壤紧密接触', priority: 'urgent', params: { amount: 30, method: '滴灌' } },
+          { type: 'monitoring', name: '成活率检查', desc: '定植后3-5天检查成活率，及时补苗', priority: 'high', params: { target: '成活率>95%' } },
+        ],
+      },
+      {
+        stage: GrowthStage.Vegetative,
+        ops: [
+          { type: 'fertilizer', name: '营养生长期追肥', desc: '促进叶片和根系发育，以氮肥为主', priority: 'high', params: { npk: '20-10-10', amount: 150 } },
+          { type: 'irrigation', name: '常规灌溉', desc: '保持土壤适度湿润，避免积水', priority: 'medium', params: { amount: 20, interval: '5-7天' } },
+          { type: 'pruning', name: '摘除老叶', desc: '摘除底部老叶和病叶，改善通风', priority: 'medium', params: { frequency: '每2周' } },
+        ],
+      },
+      {
+        stage: GrowthStage.Flowering,
+        ops: [
+          { type: 'fertilizer', name: '花期追肥', desc: '增施磷钾肥促进花芽分化', priority: 'high', params: { npk: '10-30-20', amount: 100 } },
+          { type: 'pest_control', name: '花期病虫害预防', desc: '预防灰霉病，降低棚内湿度', priority: 'high', params: { target: '灰霉病' } },
+          { type: 'monitoring', name: '花序监测', desc: '记录花序数量和发育状况', priority: 'medium', params: { target: '花序数' } },
+        ],
+      },
+      {
+        stage: GrowthStage.Fruiting,
+        ops: [
+          { type: 'irrigation', name: '果实发育期灌溉', desc: '保持均匀供水，避免裂果', priority: 'high', params: { amount: 25, ec: '1.2-1.5' } },
+          { type: 'fertilizer', name: '果实发育期追肥', desc: '增施钾肥促进果实膨大和糖分积累', priority: 'high', params: { npk: '5-15-30', amount: 120 } },
+          { type: 'pest_control', name: '果实期病虫害防治', desc: '重点防治灰霉病和炭疽病', priority: 'urgent', params: { target: '灰霉病、炭疽病' } },
+        ],
+      },
+      {
+        stage: GrowthStage.Maturity,
+        ops: [
+          { type: 'irrigation', name: '采收前控水', desc: '采收前适当减少灌溉，提高糖度', priority: 'medium', params: { amount: 15, note: '采收前3天减少' } },
+          { type: 'monitoring', name: '成熟度监测', desc: '定期检测果实SSC和硬度', priority: 'high', params: { target: 'SSC>8%' } },
+        ],
+      },
+      {
+        stage: GrowthStage.Harvest,
+        ops: [
+          { type: 'harvest', name: '采收操作', desc: '选择晴天上午采收，轻拿轻放', priority: 'urgent', params: { frequency: '每2-3天', method: '手工采摘' } },
+          { type: 'fertilizer', name: '采收期追肥', desc: '采收期持续补充营养，维持植株活力', priority: 'medium', params: { npk: '10-10-30', amount: 80 } },
+          { type: 'pest_control', name: '采收期病虫害监控', desc: '采收期注意灰霉病和红蜘蛛', priority: 'high', params: { target: '灰霉病、红蜘蛛' } },
+        ],
+      },
+    ]
+
+    /* 根据物候事件生成操作 */
+    for (const stageOp of stageOps) {
+      const event = events.find(e => e.stage === stageOp.stage)
+      if (!event) continue
+
+      for (const op of stageOp.ops) {
+        const opDate = numToDate(event.startDate)
+        operations.push({
+          id: `op-${stageOp.stage}-${op.type}`,
+          type: op.type,
+          name: op.name,
+          plannedDate: `${opDate.getFullYear()}-${String(opDate.getMonth() + 1).padStart(2, '0')}-${String(opDate.getDate()).padStart(2, '0')}`,
+          relatedStage: event.name,
+          description: op.desc,
+          priority: op.priority,
+          completed: false,
+          params: op.params,
+        })
+      }
+    }
+
+    return operations
+  }
+
   // ==================== 公共方法 ====================
 
   /**
@@ -380,6 +628,88 @@ export function useSimulation() {
   function stageName(stage: GrowthStage): string {
     const names = ['播种前', '萌芽', '营养生长', '开花', '结果', '成熟', '收获', '结束']
     return names[stage] ?? '未知'
+  }
+
+  /** 从GrowthStage枚举获取阶段中文名 */
+  function stageNameFromGrowthStage(stage: GrowthStage): string {
+    const map: Record<GrowthStage, string> = {
+      [GrowthStage.PrePlanting]: '播种前',
+      [GrowthStage.Germinating]: '萌芽期',
+      [GrowthStage.Vegetative]: '营养生长期',
+      [GrowthStage.Flowering]: '开花期',
+      [GrowthStage.Fruiting]: '结果期',
+      [GrowthStage.Maturity]: '果实膨大期',
+      [GrowthStage.Harvest]: '采收期',
+      [GrowthStage.End]: '结束',
+    }
+    return map[stage] ?? '未知'
+  }
+
+  /**
+   * 运行链式模拟 - 生成所有关联结果
+   */
+  function runChainSimulation(): ChainSimulationResult {
+    const totalDays = simStore.totalDays
+    simStore.startSimulation()
+
+    const allOutputs: DailyOutput[] = []
+    const allHarvests: HarvestRecord[] = []
+    let prev: { plant: PlantState; soil: SoilState } | null = null
+
+    for (let i = 0; i < totalDays; i++) {
+      const result = runEngineStep(i, prev)
+      prev = { plant: result.plant, soil: result.soil }
+      allOutputs.push(result.output)
+      if (result.harvest) {
+        allHarvests.push(result.harvest)
+      }
+    }
+
+    const summary = buildSummary(allOutputs, allHarvests)
+
+    /* 生成物候事件 */
+    const phenologyEvents = generatePhenologyEvents(allOutputs)
+
+    /* 生成病虫害风险 */
+    const pestRisks = generatePestRisks(allOutputs, phenologyEvents)
+
+    /* 生成农事操作 */
+    const farmOperations = generateFarmOperations(allOutputs, phenologyEvents)
+
+    /* 同步到store */
+    simStore.results = allOutputs.map(o => ({
+      day: o.das,
+      date: String(o.day),
+      growthStage: stageName(o.stage),
+      lai: o.lai,
+      totalBiomass: o.biomass,
+      leafWeight: o.leafWt,
+      stemWeight: o.stemWt,
+      rootWeight: o.rootWt,
+      fruitWeight: o.fruitWt,
+      waterStress: o.swfac,
+      nitrogenStress: o.nstres,
+      srad: o.srad,
+      tmax: o.tmax,
+      tmin: o.tmin,
+      rain: o.rain,
+    }))
+
+    simStore.currentDay = totalDays
+    simStore.status = 'complete'
+    simStore.phenologyEvents = phenologyEvents
+    simStore.pestRisks = pestRisks
+    simStore.farmOperations = farmOperations
+    simStore.addEvent('success', '链式模拟完成！共 ' + totalDays + ' 天')
+
+    return {
+      dailyOutputs: allOutputs,
+      harvests: allHarvests,
+      summary,
+      phenologyEvents,
+      pestRisks,
+      farmOperations,
+    }
   }
 
   /**
@@ -490,6 +820,7 @@ export function useSimulation() {
 
     // 方法
     runFullSimulation,
+    runChainSimulation,
     runStepByStep,
     stopStepByStep,
     exportResults,

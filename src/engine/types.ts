@@ -569,3 +569,98 @@ export interface SimulationResult {
   /** 摘要统计 */
   summary: SimulationSummary;
 }
+
+
+/** 区域配置 */
+export interface RegionConfig {
+  id: string
+  name: string
+  country: string
+  lat: number
+  lon: number
+  climateType: string
+  avgTemp: number
+  annualRain: number
+  growingSeason: string
+  elevation: number
+}
+
+/** 品种完整参数（含展示信息） */
+export interface CultivarFullParams {
+  code: string
+  name: string
+  type: '短日型' | '日中性'
+  origin: string
+  fruitDesc: string
+  keyParams: {
+    avgFruitWeight: number
+    ssc: number
+    firmness: number
+    harvestIndex: number
+  }
+  reliability: number
+  cultivarParams: CultivarParams
+  ecotypeParams: EcotypeParams
+}
+
+/** 物候事件 */
+export interface PhenologyEvent {
+  id: string
+  name: string
+  startDate: number
+  endDate: number
+  startGdd: number
+  endGdd: number
+  duration: number
+  stage: GrowthStage
+  predictedDate: string
+  description: string
+  envRequirements: string
+}
+
+/** 病虫害风险等级 */
+export type RiskLevel = 'low' | 'medium' | 'high' | 'critical'
+
+/** 病虫害风险记录 */
+export interface PestRiskRecord {
+  id: string
+  name: string
+  scientificName: string
+  riskLevel: RiskLevel
+  riskIndex: number
+  relatedStage: string
+  description: string
+  controlRecommendation: string
+  preventionMeasures: string[]
+  dailyRiskIndex: { date: string; index: number }[]
+  nextAlertDate: string
+}
+
+/** 农事操作优先级 */
+export type OperationPriority = 'low' | 'medium' | 'high' | 'urgent'
+
+/** 农事操作类型 */
+export type OperationType = 'irrigation' | 'fertilizer' | 'pruning' | 'pest_control' | 'harvest' | 'planting' | 'monitoring'
+
+/** 农事操作记录 */
+export interface FarmOperation {
+  id: string
+  type: OperationType
+  name: string
+  plannedDate: string
+  relatedStage: string
+  description: string
+  priority: OperationPriority
+  completed: boolean
+  params: Record<string, number | string>
+}
+
+/** 链式模拟结果 */
+export interface ChainSimulationResult {
+  dailyOutputs: DailyOutput[]
+  harvests: HarvestRecord[]
+  summary: SimulationSummary
+  phenologyEvents: PhenologyEvent[]
+  pestRisks: PestRiskRecord[]
+  farmOperations: FarmOperation[]
+}

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, reactive } from 'vue'
+import type { RegionConfig, CultivarFullParams } from '@/engine/types'
 
 /* 气象数据接口 */
 export interface WeatherRecord {
@@ -42,6 +43,58 @@ export interface FertilizerEvent {
   kPct: number      // K含量 %
 }
 
+/* 内置区域列表 */
+const builtInRegions: RegionConfig[] = [
+  {
+    id: 'florida',
+    name: 'Florida',
+    country: '美国',
+    lat: 27.9,
+    lon: -82.3,
+    elevation: 15,
+    avgTemp: 22.5,
+    annualRain: 1300,
+    growingSeason: '10月-5月',
+    climateType: 'subtropical',
+  },
+  {
+    id: 'california',
+    name: 'California',
+    country: '美国',
+    lat: 36.7,
+    lon: -119.8,
+    elevation: 100,
+    avgTemp: 14.5,
+    annualRain: 400,
+    growingSeason: '10月-7月',
+    climateType: 'mediterranean',
+  },
+  {
+    id: 'shanghai',
+    name: '上海',
+    country: '中国',
+    lat: 31.2,
+    lon: 121.5,
+    elevation: 5,
+    avgTemp: 16.5,
+    annualRain: 1100,
+    growingSeason: '9月-5月',
+    climateType: 'subtropical-monsoon',
+  },
+  {
+    id: 'kunming',
+    name: '昆明',
+    country: '中国',
+    lat: 25.0,
+    lon: 102.7,
+    elevation: 1900,
+    avgTemp: 15.0,
+    annualRain: 1000,
+    growingSeason: '9月-5月',
+    climateType: 'subtropical-highland',
+  },
+]
+
 /* 配置存储 */
 export const useConfigStore = defineStore('config', () => {
   /* 气象配置 */
@@ -67,11 +120,40 @@ export const useConfigStore = defineStore('config', () => {
     acidityTarget: 0.8,
   })
 
+  /* 新增：选中的区域 */
+  const selectedRegion = ref<RegionConfig | null>(null)
+
+  /* 新增：选中的品种完整参数 */
+  const selectedCultivarFull = ref<CultivarFullParams | null>(null)
+
   /* 管理配置 */
   const plantingDate = ref('2025-03-01')
   const plantingDensity = ref(8000)
   const irrigationEvents = ref<IrrigationEvent[]>([])
   const fertilizerEvents = ref<FertilizerEvent[]>([])
+
+  /* 获取内置区域列表 */
+  function getRegions(): RegionConfig[] {
+    return builtInRegions
+  }
+
+  /* 设置区域 */
+  function setRegion(region: RegionConfig) {
+    selectedRegion.value = region
+    stationName.value = region.name
+    stationLat.value = region.lat
+    stationLon.value = region.lon
+    stationElev.value = region.elevation
+  }
+
+  /* 设置品种完整参数 */
+  function setCultivarFull(cultivar: CultivarFullParams) {
+    selectedCultivarFull.value = cultivar
+    cultivarName.value = cultivar.name
+    cultivarParams.maxLai = cultivar.cultivarParams.laimax
+    cultivarParams.potentialFruitWeight = cultivar.keyParams.avgFruitWeight
+    cultivarParams.sscTarget = cultivar.keyParams.ssc
+  }
 
   /* 加载预设数据 */
   function loadPreset() {
@@ -195,8 +277,10 @@ export const useConfigStore = defineStore('config', () => {
     stationName, stationLat, stationLon, stationElev, weatherData,
     soilName, soilLayers,
     cultivarName, cultivarParams,
+    selectedRegion, selectedCultivarFull,
     plantingDate, plantingDensity, irrigationEvents, fertilizerEvents,
-    loadPreset, addSoilLayer, removeSoilLayer,
+    getRegions, setRegion, setCultivarFull, loadPreset,
+    addSoilLayer, removeSoilLayer,
     addIrrigation, removeIrrigation, addFertilizer, removeFertilizer,
   }
 })

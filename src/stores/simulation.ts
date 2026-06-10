@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import type { PestRiskRecord, FarmOperation, PhenologyEvent } from '@/engine/types'
 
 /* 模拟状态类型 */
 export type SimulationStatus = 'idle' | 'running' | 'paused' | 'complete'
@@ -47,6 +48,15 @@ export const useSimulationStore = defineStore('simulation', () => {
   const speed = ref(1)
   const results = ref<DailyResult[]>([])
   const eventLog = ref<{ time: string; type: string; message: string }[]>([])
+
+  /* 新增：病虫害风险 */
+  const pestRisks = ref<PestRiskRecord[]>([])
+
+  /* 新增：农事操作 */
+  const farmOperations = ref<FarmOperation[]>([])
+
+  /* 新增：物候事件 */
+  const phenologyEvents = ref<PhenologyEvent[]>([])
 
   /* 计算属性 */
   const progress = computed(() => {
@@ -142,6 +152,9 @@ export const useSimulationStore = defineStore('simulation', () => {
     currentDay.value = 0
     results.value = []
     eventLog.value = []
+    pestRisks.value = []
+    farmOperations.value = []
+    phenologyEvents.value = []
   }
 
   /* 添加事件日志 */
@@ -224,6 +237,7 @@ export const useSimulationStore = defineStore('simulation', () => {
 
   return {
     status, currentDay, totalDays, speed, results, eventLog,
+    pestRisks, farmOperations, phenologyEvents,
     progress, latestResult, currentGrowthStage, currentLai,
     currentBiomass, currentFruitWeight, currentWaterStress,
     currentNitrogenStress, yieldResult, qualityResults,
