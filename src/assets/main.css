@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 全局基础样式 */
+@layer base {
+  html {
+    font-family: 'DM Sans', sans-serif;
+    @apply bg-midnight-900 text-midnight-100;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'DM Serif Display', serif;
+  }
+
+  body {
+    @apply antialiased;
+  }
+
+  /* 滚动条样式 */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-midnight-800;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-midnight-600 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-midnight-500;
+  }
+}
+
+/* 自定义组件类 */
+@layer components {
+  /* 玻璃拟态卡片 */
+  .glass-card {
+    @apply bg-midnight-800/60 backdrop-blur-md border border-midnight-600/30 rounded-xl shadow-lg;
+  }
+
+  /* 草莓色主按钮 */
+  .strawberry-btn {
+    @apply bg-strawberry-500 hover:bg-strawberry-600 text-white font-semibold
+           px-5 py-2.5 rounded-lg transition-all duration-200
+           shadow-lg shadow-strawberry-500/25 hover:shadow-strawberry-500/40
+           active:scale-95;
+  }
+
+  /* 幽灵按钮 */
+  .ghost-btn {
+    @apply bg-transparent hover:bg-midnight-700/50 text-midnight-200
+           font-medium px-4 py-2 rounded-lg transition-all duration-200
+           border border-midnight-600/40 hover:border-midnight-500/60;
+  }
+
+  /* 输入框 */
+  .input-field {
+    @apply bg-midnight-800/80 border border-midnight-600/40 rounded-lg
+           px-3 py-2 text-midnight-100 placeholder-midnight-400
+           focus:outline-none focus:border-strawberry-500/60 focus:ring-1 focus:ring-strawberry-500/30
+           transition-all duration-200 w-full;
+  }
+
+  /* 统计卡片 */
+  .stat-card {
+    @apply glass-card p-4 flex flex-col gap-1;
+  }
+
+  .stat-value {
+    @apply text-2xl font-bold font-heading text-midnight-50;
+  }
+
+  .stat-label {
+    @apply text-xs text-midnight-400 uppercase tracking-wider;
+  }
+
+  /* 区块标题 */
+  .section-title {
+    @apply text-lg font-heading text-midnight-50 mb-4;
+  }
+
+  /* 导航项 */
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg
+           text-midnight-300 hover:text-midnight-100 hover:bg-midnight-700/40
+           transition-all duration-200 cursor-pointer;
+  }
+
+  .nav-item-active {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg
+           text-strawberry-500 bg-strawberry-500/10
+           border-l-2 border-strawberry-500 cursor-pointer;
+  }
+
+  /* 标签页 */
+  .tab-item {
+    @apply px-4 py-2 text-sm font-medium text-midnight-400
+           hover:text-midnight-200 transition-colors duration-200
+           border-b-2 border-transparent cursor-pointer;
+  }
+
+  .tab-item-active {
+    @apply px-4 py-2 text-sm font-medium text-strawberry-500
+           border-b-2 border-strawberry-500 cursor-pointer;
+  }
+
+  /* 文件拖放区域 */
+  .drop-zone {
+    @apply border-2 border-dashed border-midnight-600/50 rounded-xl
+           p-8 text-center transition-all duration-200
+           hover:border-strawberry-500/40 hover:bg-strawberry-500/5
+           cursor-pointer;
+  }
+
+  .drop-zone-active {
+    @apply border-strawberry-500 bg-strawberry-500/10;
+  }
+}
