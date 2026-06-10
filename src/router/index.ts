@@ -1,38 +1,37 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-/* 路由配置 - 5页结构 */
+/* 路由配置 - 双版本结构 */
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
       path: '/',
-      name: 'basic-info',
-      component: () => import('@/pages/BasicInfoPage.vue'),
-      meta: { title: '基础信息' },
+      name: 'version-select',
+      component: () => import('@/pages/VersionSelectPage.vue'),
     },
     {
-      path: '/phenology',
-      name: 'phenology',
-      component: () => import('@/pages/PhenologyPage.vue'),
-      meta: { title: '物候方案' },
+      path: '/v1',
+      name: 'v1',
+      component: () => import('@/components/layout/AppLayoutV1.vue'),
+      children: [
+        { path: '', name: 'v1-config', component: () => import('@/pages/v1/ConfigPage.vue') },
+        { path: 'simulation', name: 'v1-simulation', component: () => import('@/pages/v1/SimulationPage.vue') },
+        { path: 'results', name: 'v1-results', component: () => import('@/pages/v1/ResultsPage.vue') },
+        { path: 'cultivars', name: 'v1-cultivars', component: () => import('@/pages/v1/CultivarsPage.vue') },
+        { path: 'data', name: 'v1-data', component: () => import('@/pages/v1/DataPage.vue') },
+      ],
     },
     {
-      path: '/pest',
-      name: 'pest',
-      component: () => import('@/pages/PestPage.vue'),
-      meta: { title: '植保IPM' },
-    },
-    {
-      path: '/operations',
-      name: 'operations',
-      component: () => import('@/pages/OperationsPage.vue'),
-      meta: { title: '农事操作' },
-    },
-    {
-      path: '/yield',
-      name: 'yield',
-      component: () => import('@/pages/YieldPage.vue'),
-      meta: { title: '产量预测' },
+      path: '/v2',
+      name: 'v2',
+      component: () => import('@/components/layout/AppLayoutV2.vue'),
+      children: [
+        { path: '', name: 'v2-basic', component: () => import('@/pages/BasicInfoPage.vue') },
+        { path: 'phenology', name: 'v2-phenology', component: () => import('@/pages/PhenologyPage.vue') },
+        { path: 'pest', name: 'v2-pest', component: () => import('@/pages/PestPage.vue') },
+        { path: 'operations', name: 'v2-operations', component: () => import('@/pages/OperationsPage.vue') },
+        { path: 'yield', name: 'v2-yield', component: () => import('@/pages/YieldPage.vue') },
+      ],
     },
   ],
 })
