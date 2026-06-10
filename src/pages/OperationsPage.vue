@@ -126,7 +126,7 @@ function typeName(type: OperationType): string {
 /* 优先级样式 */
 function priorityClass(priority: OperationPriority): string {
   const map: Record<OperationPriority, string> = {
-    low: 'bg-gray-100 text-gray-600',
+    low: 'bg-midnight-700/30 text-midnight-300',
     medium: 'bg-blue-100 text-blue-700',
     high: 'bg-amber-100 text-amber-700',
     urgent: 'bg-red-100 text-red-700',
@@ -195,9 +195,9 @@ function getStageBarStyle(stage: typeof stageBarConfig.value[0]) {
       v-if="simulation.status === 'idle'"
       class="v2-card p-12 text-center"
     >
-      <Sprout :size="48" class="mx-auto text-gray-400 mb-4" />
-      <h3 class="text-xl text-gray-600 mb-2">尚未运行模拟</h3>
-      <p class="text-gray-500">请先在基础信息页面完成配置并生成方案</p>
+      <Sprout :size="48" class="mx-auto text-midnight-400 mb-4" />
+      <h3 class="text-xl text-midnight-300 mb-2">尚未运行模拟</h3>
+      <p class="text-midnight-300">请先在基础信息页面完成配置并生成方案</p>
     </div>
 
     <template v-else>
@@ -210,11 +210,11 @@ function getStageBarStyle(stage: typeof stageBarConfig.value[0]) {
         >
           <div :class="['absolute top-0 left-0 right-0 h-1', card.accent]"></div>
           <div class="flex items-center gap-2 mb-1">
-            <component :is="card.icon" :size="14" class="text-gray-500" />
-            <span class="text-xs text-gray-500 uppercase tracking-wider">{{ card.label }}</span>
+            <component :is="card.icon" :size="14" class="text-midnight-300" />
+            <span class="text-xs text-midnight-300 uppercase tracking-wider">{{ card.label }}</span>
           </div>
-          <span class="text-2xl font-bold text-gray-800">{{ card.value }}</span>
-          <span class="text-xs text-gray-400 mt-1">{{ card.sub }}</span>
+          <span class="text-2xl font-bold text-midnight-100">{{ card.value }}</span>
+          <span class="text-xs text-midnight-400 mt-1">{{ card.sub }}</span>
         </div>
       </div>
 
@@ -237,7 +237,7 @@ function getStageBarStyle(stage: typeof stageBarConfig.value[0]) {
           </div>
         </div>
         <!-- 月份刻度 -->
-        <div class="flex text-xs text-gray-400 justify-between px-1">
+        <div class="flex text-xs text-midnight-400 justify-between px-1">
           <span v-for="m in ['9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月']" :key="m">
             {{ m }}
           </span>
@@ -267,7 +267,7 @@ function getStageBarStyle(stage: typeof stageBarConfig.value[0]) {
               <div
                 v-for="(op, idx) in ops"
                 :key="`${op.plannedDate}-${op.type}-${idx}`"
-                class="p-3 rounded-lg bg-gray-50 border border-gray-100"
+                class="p-3 rounded-lg bg-midnight-800/80 border border-gray-100"
               >
                 <div class="flex items-center justify-between mb-1">
                   <div class="flex items-center gap-2">
@@ -276,7 +276,7 @@ function getStageBarStyle(stage: typeof stageBarConfig.value[0]) {
                       :size="14"
                       :style="{ color: typeColor(op.type) }"
                     />
-                    <span class="text-sm font-medium text-gray-800">{{ op.name }}</span>
+                    <span class="text-sm font-medium text-midnight-100">{{ op.name }}</span>
                   </div>
                   <span
                     class="text-xs px-2 py-0.5 rounded-full"
@@ -285,8 +285,8 @@ function getStageBarStyle(stage: typeof stageBarConfig.value[0]) {
                     {{ priorityName(op.priority) }}
                   </span>
                 </div>
-                <p class="text-xs text-gray-600 mb-1">{{ op.description }}</p>
-                <div class="flex items-center gap-3 text-xs text-gray-400">
+                <p class="text-xs text-midnight-300 mb-1">{{ op.description }}</p>
+                <div class="flex items-center gap-3 text-xs text-midnight-400">
                   <span class="flex items-center gap-1">
                     <CalendarCheck :size="10" />
                     {{ op.plannedDate }}
@@ -300,7 +300,7 @@ function getStageBarStyle(stage: typeof stageBarConfig.value[0]) {
                   <span
                     v-for="(val, key) in op.params"
                     :key="key"
-                    class="text-xs px-2 py-0.5 rounded bg-gray-200 text-gray-600"
+                    class="text-xs px-2 py-0.5 rounded bg-midnight-700/40 text-midnight-300"
                   >
                     {{ key }}: {{ val }}
                   </span>
@@ -309,7 +309,7 @@ function getStageBarStyle(stage: typeof stageBarConfig.value[0]) {
 
               <div
                 v-if="ops.length === 0"
-                class="text-center py-4 text-gray-400 text-sm"
+                class="text-center py-4 text-midnight-400 text-sm"
               >
                 暂无操作
               </div>
@@ -318,7 +318,7 @@ function getStageBarStyle(stage: typeof stageBarConfig.value[0]) {
 
           <div
             v-if="groupedByStage.length === 0"
-            class="col-span-full text-center py-8 text-gray-400 text-sm"
+            class="col-span-full text-center py-8 text-midnight-400 text-sm"
           >
             暂无农事操作建议
           </div>
@@ -348,14 +348,14 @@ function getStageBarStyle(stage: typeof stageBarConfig.value[0]) {
                 v-for="(row, idx) in irrigationFertTable"
                 :key="idx"
                 class="border-b border-gray-100"
-                :class="idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'"
+                :class="idx % 2 === 0 ? 'bg-white' : 'bg-midnight-800/80'"
               >
-                <td class="py-2 px-3 text-gray-700 font-medium">{{ row.month }}</td>
-                <td class="py-2 px-3 text-gray-600">{{ row.stage }}</td>
-                <td class="py-2 px-3 text-gray-600">{{ row.irrigation }}</td>
-                <td class="py-2 px-3 text-gray-600">{{ row.frequency }}</td>
-                <td class="py-2 px-3 text-gray-700 font-medium">{{ row.nPK }}</td>
-                <td class="py-2 px-3 text-gray-600">{{ row.usage }}</td>
+                <td class="py-2 px-3 text-midnight-200 font-medium">{{ row.month }}</td>
+                <td class="py-2 px-3 text-midnight-300">{{ row.stage }}</td>
+                <td class="py-2 px-3 text-midnight-300">{{ row.irrigation }}</td>
+                <td class="py-2 px-3 text-midnight-300">{{ row.frequency }}</td>
+                <td class="py-2 px-3 text-midnight-200 font-medium">{{ row.nPK }}</td>
+                <td class="py-2 px-3 text-midnight-300">{{ row.usage }}</td>
               </tr>
             </tbody>
           </table>

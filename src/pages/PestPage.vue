@@ -83,9 +83,9 @@ function stageName(stageName: string): string {
       v-if="simulation.status === 'idle'"
       class="v2-card p-12 text-center"
     >
-      <Shield :size="48" class="mx-auto text-gray-400 mb-4" />
-      <h3 class="text-xl text-gray-600 mb-2">尚未运行模拟</h3>
-      <p class="text-gray-500">请先在基础信息页面完成配置并生成方案</p>
+      <Shield :size="48" class="mx-auto text-midnight-400 mb-4" />
+      <h3 class="text-xl text-midnight-300 mb-2">尚未运行模拟</h3>
+      <p class="text-midnight-300">请先在基础信息页面完成配置并生成方案</p>
     </div>
 
     <template v-else>
@@ -98,11 +98,11 @@ function stageName(stageName: string): string {
         >
           <div :class="['absolute top-0 left-0 right-0 h-1', card.accent]"></div>
           <div class="flex items-center gap-2 mb-1">
-            <component :is="card.icon" :size="14" class="text-gray-500" />
-            <span class="text-xs text-gray-500 uppercase tracking-wider">{{ card.label }}</span>
+            <component :is="card.icon" :size="14" class="text-midnight-300" />
+            <span class="text-xs text-midnight-300 uppercase tracking-wider">{{ card.label }}</span>
           </div>
-          <span class="text-2xl font-bold text-gray-800">{{ card.value }}</span>
-          <span class="text-xs text-gray-400 mt-1">{{ card.sub }}</span>
+          <span class="text-2xl font-bold text-midnight-100">{{ card.value }}</span>
+          <span class="text-xs text-midnight-400 mt-1">{{ card.sub }}</span>
         </div>
       </div>
 
@@ -140,8 +140,8 @@ function stageName(stageName: string): string {
             >
               <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center gap-2">
-                  <Bug :size="16" class="text-gray-500" />
-                  <span class="font-medium text-gray-800">{{ risk.name }}</span>
+                  <Bug :size="16" class="text-midnight-300" />
+                  <span class="font-medium text-midnight-100">{{ risk.name }}</span>
                 </div>
                 <span
                   class="text-xs px-2 py-0.5 rounded-full"
@@ -151,9 +151,9 @@ function stageName(stageName: string): string {
                 </span>
               </div>
 
-              <p class="text-xs text-gray-600 mb-3">{{ risk.description }}</p>
+              <p class="text-xs text-midnight-300 mb-3">{{ risk.description }}</p>
 
-              <div class="space-y-1 text-xs text-gray-500">
+              <div class="space-y-1 text-xs text-midnight-300">
                 <div class="flex items-center gap-2">
                   <Thermometer :size="12" />
                   <span>适宜温度: {{ risk.dailyRiskIndex[0]?.index || '-' }}°C</span>
@@ -165,23 +165,23 @@ function stageName(stageName: string): string {
               </div>
 
               <div class="mt-3 pt-3 border-t border-gray-200">
-                <div class="flex items-center gap-2 text-xs text-gray-500 mb-1">
+                <div class="flex items-center gap-2 text-xs text-midnight-300 mb-1">
                   <span>关联阶段: {{ stageName(risk.relatedStage) }}</span>
                 </div>
-                <div class="flex items-center gap-2 text-xs text-gray-500">
+                <div class="flex items-center gap-2 text-xs text-midnight-300">
                   <span>下次预警: {{ risk.nextAlertDate }}</span>
                 </div>
               </div>
 
-              <div class="mt-3 p-2 rounded bg-gray-100">
-                <div class="text-xs font-medium text-gray-700 mb-1">防治建议</div>
-                <p class="text-xs text-gray-600">{{ risk.controlRecommendation }}</p>
+              <div class="mt-3 p-2 rounded bg-midnight-700/30">
+                <div class="text-xs font-medium text-midnight-200 mb-1">防治建议</div>
+                <p class="text-xs text-midnight-300">{{ risk.controlRecommendation }}</p>
               </div>
             </div>
 
             <div
               v-if="pestRisks.length === 0"
-              class="col-span-full text-center py-8 text-gray-400 text-sm"
+              class="col-span-full text-center py-8 text-midnight-400 text-sm"
             >
               暂无病虫害风险
             </div>
@@ -235,10 +235,10 @@ function stageName(stageName: string): string {
             </h2>
             <div class="space-y-2 text-sm">
               <div v-for="(risk, idx) in pestRisks.slice(0, 4)" :key="idx" class="flex items-center justify-between py-1">
-                <span class="text-gray-700">{{ risk.name }}</span>
-                <span class="text-gray-500 text-xs">{{ risk.nextAlertDate }}</span>
+                <span class="text-midnight-200">{{ risk.name }}</span>
+                <span class="text-midnight-300 text-xs">{{ risk.nextAlertDate }}</span>
               </div>
-              <div v-if="pestRisks.length === 0" class="text-center text-gray-400 text-xs py-4">
+              <div v-if="pestRisks.length === 0" class="text-center text-midnight-400 text-xs py-4">
                 暂无防治安排
               </div>
             </div>

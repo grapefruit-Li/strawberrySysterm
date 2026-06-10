@@ -135,7 +135,7 @@ function stageBadgeClass(stageName: string): string {
   if (color === '#EC4899') return 'bg-pink-100 text-pink-700'
   if (color === '#E63946') return 'bg-red-100 text-red-700'
   if (color === '#8B5CF6') return 'bg-purple-100 text-purple-700'
-  return 'bg-gray-100 text-gray-600'
+  return 'bg-midnight-700/30 text-midnight-300'
 }
 
 function confidenceClass(duration: number): string {
@@ -167,9 +167,9 @@ function stageNumber(stage: GrowthStage): string {
       v-if="simulation.status === 'idle'"
       class="v2-card p-12 text-center"
     >
-      <Sprout :size="48" class="mx-auto text-gray-400 mb-4" />
-      <h3 class="text-xl text-gray-600 mb-2">尚未运行模拟</h3>
-      <p class="text-gray-500">请先在基础信息页面完成配置并生成方案</p>
+      <Sprout :size="48" class="mx-auto text-midnight-400 mb-4" />
+      <h3 class="text-xl text-midnight-300 mb-2">尚未运行模拟</h3>
+      <p class="text-midnight-300">请先在基础信息页面完成配置并生成方案</p>
     </div>
 
     <template v-else>
@@ -182,11 +182,11 @@ function stageNumber(stage: GrowthStage): string {
         >
           <div :class="['absolute top-0 left-0 right-0 h-1', card.accent]"></div>
           <div class="flex items-center gap-2 mb-1">
-            <component :is="card.icon" :size="14" class="text-gray-500" />
-            <span class="text-xs text-gray-500 uppercase tracking-wider">{{ card.label }}</span>
+            <component :is="card.icon" :size="14" class="text-midnight-300" />
+            <span class="text-xs text-midnight-300 uppercase tracking-wider">{{ card.label }}</span>
           </div>
-          <span class="text-2xl font-bold text-gray-800">{{ card.value }}</span>
-          <span class="text-xs text-gray-400 mt-1">{{ card.sub }}</span>
+          <span class="text-2xl font-bold text-midnight-100">{{ card.value }}</span>
+          <span class="text-xs text-midnight-400 mt-1">{{ card.sub }}</span>
         </div>
       </div>
 
@@ -228,7 +228,7 @@ function stageNumber(stage: GrowthStage): string {
             <div
               v-for="(event, idx) in phenologyEvents"
               :key="event.name + idx"
-              class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100"
+              class="flex items-start gap-3 p-3 rounded-lg bg-midnight-800/80 border border-gray-100"
             >
               <div class="flex items-center gap-2 shrink-0">
                 <div
@@ -238,7 +238,7 @@ function stageNumber(stage: GrowthStage): string {
               </div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-1">
-                  <span class="text-sm font-medium text-gray-800">{{ event.name }}</span>
+                  <span class="text-sm font-medium text-midnight-100">{{ event.name }}</span>
                   <span
                     class="text-xs px-2 py-0.5 rounded-full"
                     :class="stageBadgeClass(event.name)"
@@ -246,14 +246,14 @@ function stageNumber(stage: GrowthStage): string {
                     {{ stageNumber(event.stage) }}
                   </span>
                 </div>
-                <div class="text-xs text-gray-500 space-y-0.5">
+                <div class="text-xs text-midnight-300 space-y-0.5">
                   <div>起始日期: {{ event.predictedDate }}</div>
                   <div>GDD: {{ event.startGdd }}-{{ event.endGdd }}°C·d</div>
                 </div>
               </div>
               <div class="text-right shrink-0">
-                <div class="text-xs text-gray-500">持续</div>
-                <div class="text-sm font-bold text-gray-800">{{ event.duration }}天</div>
+                <div class="text-xs text-midnight-300">持续</div>
+                <div class="text-sm font-bold text-midnight-100">{{ event.duration }}天</div>
                 <div
                   class="text-xs px-1.5 py-0.5 rounded mt-1"
                   :class="confidenceClass(event.duration)"
@@ -265,7 +265,7 @@ function stageNumber(stage: GrowthStage): string {
 
             <div
               v-if="phenologyEvents.length === 0"
-              class="text-center py-8 text-gray-400 text-sm"
+              class="text-center py-8 text-midnight-400 text-sm"
             >
               暂无物候事件
             </div>
@@ -285,10 +285,10 @@ function stageNumber(stage: GrowthStage): string {
               class="space-y-1"
             >
               <div class="flex items-center justify-between text-sm">
-                <span class="text-gray-700">{{ event.name }}</span>
-                <span class="text-gray-500">{{ event.startGdd }}-{{ event.endGdd }}°C·d</span>
+                <span class="text-midnight-200">{{ event.name }}</span>
+                <span class="text-midnight-300">{{ event.startGdd }}-{{ event.endGdd }}°C·d</span>
               </div>
-              <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div class="h-2 bg-midnight-700/40 rounded-full overflow-hidden">
                 <div
                   class="h-full rounded-full transition-all duration-500"
                   :style="{
@@ -301,7 +301,7 @@ function stageNumber(stage: GrowthStage): string {
 
             <div
               v-if="phenologyEvents.length === 0"
-              class="text-center py-8 text-gray-400 text-sm"
+              class="text-center py-8 text-midnight-400 text-sm"
             >
               暂无数据
             </div>

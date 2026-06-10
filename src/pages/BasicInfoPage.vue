@@ -71,8 +71,8 @@ async function generatePlan() {
   <div class="space-y-6">
     <!-- 页面标题 -->
     <div>
-      <h1 class="text-2xl font-heading text-gray-800 mb-1">基础信息</h1>
-      <p class="text-gray-500 text-sm">选择品种、区域和定植配置，启动链式决策引擎</p>
+      <h1 class="text-2xl font-heading text-midnight-100 mb-1">基础信息</h1>
+      <p class="text-midnight-300 text-sm">选择品种、区域和定植配置，启动链式决策引擎</p>
     </div>
 
     <!-- 品种选择 -->
@@ -92,7 +92,7 @@ async function generatePlan() {
             <option value="日中性">日中性</option>
           </select>
           <div class="relative">
-            <Search :size="14" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search :size="14" class="absolute left-3 top-1/2 -translate-y-1/2 text-midnight-400" />
             <input
               v-model="cultivarSearch"
               type="text"
@@ -110,7 +110,7 @@ async function generatePlan() {
           class="p-4 rounded-lg border-2 transition-all duration-200 cursor-pointer relative"
           :class="config.selectedCultivar === c.code
             ? 'border-red-400 bg-red-50 shadow-md shadow-red-400/10'
-            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'"
+            : 'border-gray-200 bg-white hover:border-midnight-600/40 hover:shadow-sm'"
           @click="selectCultivar(c)"
         >
           <CheckCircle2
@@ -121,49 +121,49 @@ async function generatePlan() {
           <Circle
             v-else
             :size="18"
-            class="absolute top-3 right-3 text-gray-300"
+            class="absolute top-3 right-3 text-midnight-300"
           />
 
           <div class="flex items-center gap-2 mb-2">
-            <span class="text-sm font-bold text-gray-800">{{ c.name }}</span>
+            <span class="text-sm font-bold text-midnight-100">{{ c.name }}</span>
             <span class="text-xs px-2 py-0.5 rounded-full"
                   :class="c.type === '日中性' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'">
               {{ c.type }}
             </span>
           </div>
 
-          <p class="text-xs text-gray-500 mb-3 line-clamp-2">{{ c.fruitDesc }}</p>
+          <p class="text-xs text-midnight-300 mb-3 line-clamp-2">{{ c.fruitDesc }}</p>
 
           <div class="grid grid-cols-2 gap-2 text-xs">
-            <div class="flex items-center gap-1 text-gray-600">
-              <span class="text-gray-400">单果重</span>
+            <div class="flex items-center gap-1 text-midnight-300">
+              <span class="text-midnight-400">单果重</span>
               <span class="font-medium">{{ c.keyParams.avgFruitWeight }}g</span>
             </div>
-            <div class="flex items-center gap-1 text-gray-600">
-              <span class="text-gray-400">糖度</span>
+            <div class="flex items-center gap-1 text-midnight-300">
+              <span class="text-midnight-400">糖度</span>
               <span class="font-medium">{{ c.keyParams.ssc }}°Brix</span>
             </div>
-            <div class="flex items-center gap-1 text-gray-600">
-              <span class="text-gray-400">硬度</span>
+            <div class="flex items-center gap-1 text-midnight-300">
+              <span class="text-midnight-400">硬度</span>
               <span class="font-medium">{{ c.keyParams.firmness }}</span>
             </div>
-            <div class="flex items-center gap-1 text-gray-600">
-              <span class="text-gray-400">收获指数</span>
+            <div class="flex items-center gap-1 text-midnight-300">
+              <span class="text-midnight-400">收获指数</span>
               <span class="font-medium">{{ c.keyParams.harvestIndex }}</span>
             </div>
-            <div v-if="c.chillingRequirement !== undefined" class="flex items-center gap-1 text-gray-600">
-              <span class="text-gray-400">需冷量</span>
+            <div v-if="c.chillingRequirement !== undefined" class="flex items-center gap-1 text-midnight-300">
+              <span class="text-midnight-400">需冷量</span>
               <span class="font-medium">{{ c.chillingRequirement }}h</span>
             </div>
-            <div v-if="c.vegGdd !== undefined" class="flex items-center gap-1 text-gray-600">
-              <span class="text-gray-400">营养积温</span>
+            <div v-if="c.vegGdd !== undefined" class="flex items-center gap-1 text-midnight-300">
+              <span class="text-midnight-400">营养积温</span>
               <span class="font-medium">{{ c.vegGdd }}°C·d</span>
             </div>
           </div>
 
           <div class="mt-3 flex items-center gap-1">
             <Sparkles :size="10" class="text-amber-400" />
-            <span class="text-xs text-gray-400">数据可信度 {{ c.reliability }}/5</span>
+            <span class="text-xs text-midnight-400">数据可信度 {{ c.reliability }}/5</span>
           </div>
         </div>
       </div>
@@ -182,7 +182,7 @@ async function generatePlan() {
           class="p-4 rounded-lg border-2 transition-all duration-200 cursor-pointer relative"
           :class="config.selectedRegion?.id === r.id
             ? 'border-blue-400 bg-blue-50 shadow-md shadow-blue-400/10'
-            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'"
+            : 'border-gray-200 bg-white hover:border-midnight-600/40 hover:shadow-sm'"
           @click="selectRegion(r.id)"
         >
           <CheckCircle2
@@ -193,15 +193,15 @@ async function generatePlan() {
           <Circle
             v-else
             :size="18"
-            class="absolute top-3 right-3 text-gray-300"
+            class="absolute top-3 right-3 text-midnight-300"
           />
 
           <div class="flex items-center gap-2 mb-1">
             <MapPin :size="14" class="text-blue-500" />
-            <span class="font-bold text-gray-800">{{ r.name }}</span>
+            <span class="font-bold text-midnight-100">{{ r.name }}</span>
           </div>
 
-          <div class="grid grid-cols-2 gap-1 text-xs text-gray-500 mt-2">
+          <div class="grid grid-cols-2 gap-1 text-xs text-midnight-300 mt-2">
             <div>年均温: {{ r.avgTemp }}°C</div>
             <div>年降雨: {{ r.annualRain }}mm</div>
             <div>生长季: {{ r.growingSeason }}</div>
@@ -219,11 +219,11 @@ async function generatePlan() {
       </h2>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">定植日期</label>
+          <label class="block text-sm font-medium text-midnight-200 mb-2">定植日期</label>
           <input v-model="config.plantingDate" type="date" class="v2-input w-full" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">种植密度 (株/m²)</label>
+          <label class="block text-sm font-medium text-midnight-200 mb-2">种植密度 (株/m²)</label>
           <input
             v-model.number="config.plantingDensity"
             type="number"
@@ -234,34 +234,34 @@ async function generatePlan() {
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">预计采收天数</label>
-          <div class="v2-input w-full bg-gray-50 flex items-center text-gray-500">
+          <label class="block text-sm font-medium text-midnight-200 mb-2">预计采收天数</label>
+          <div class="v2-input w-full bg-midnight-800/80 flex items-center text-midnight-300">
             {{ config.simulationDays }} 天
           </div>
         </div>
       </div>
 
-      <div class="mt-4 p-4 rounded-lg bg-gray-50 border border-gray-200">
+      <div class="mt-4 p-4 rounded-lg bg-midnight-800/80 border border-gray-200">
         <div class="flex items-center gap-2 mb-2">
           <Sparkles :size="14" class="text-amber-500" />
-          <span class="text-sm font-medium text-gray-700">配置预览</span>
+          <span class="text-sm font-medium text-midnight-200">配置预览</span>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
           <div>
-            <span class="text-gray-500">品种类型</span>
-            <p class="font-medium text-gray-800">{{ config.selectedCultivarFull?.type ?? '-' }}</p>
+            <span class="text-midnight-300">品种类型</span>
+            <p class="font-medium text-midnight-100">{{ config.selectedCultivarFull?.type ?? '-' }}</p>
           </div>
           <div>
-            <span class="text-gray-500">最大LAI</span>
-            <p class="font-medium text-gray-800">{{ config.selectedCultivarFull?.cultivarParams.laimax ?? '-' }}</p>
+            <span class="text-midnight-300">最大LAI</span>
+            <p class="font-medium text-midnight-100">{{ config.selectedCultivarFull?.cultivarParams.laimax ?? '-' }}</p>
           </div>
           <div>
-            <span class="text-gray-500">目标SSC</span>
-            <p class="font-medium text-gray-800">{{ config.selectedCultivarFull?.keyParams.ssc ?? '-' }}°Brix</p>
+            <span class="text-midnight-300">目标SSC</span>
+            <p class="font-medium text-midnight-100">{{ config.selectedCultivarFull?.keyParams.ssc ?? '-' }}°Brix</p>
           </div>
           <div>
-            <span class="text-gray-500">区域海拔</span>
-            <p class="font-medium text-gray-800">{{ config.selectedRegion?.elevation ?? '-' }}m</p>
+            <span class="text-midnight-300">区域海拔</span>
+            <p class="font-medium text-midnight-100">{{ config.selectedRegion?.elevation ?? '-' }}m</p>
           </div>
         </div>
       </div>

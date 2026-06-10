@@ -479,44 +479,44 @@ export function useChart() {
     }
   }
 
-  /* 浅色主题配置 */
+  /* 深色主题配置 */
   const lightChartTheme = {
     backgroundColor: 'transparent',
     textStyle: {
-      color: '#374151',
+      color: '#D1D5DB',
       fontFamily: 'DM Sans, sans-serif',
     },
     title: {
       textStyle: {
-        color: '#1F2937',
+        color: '#F3F4F6',
         fontFamily: 'DM Serif Display, serif',
       },
     },
   }
 
-  /* 创建浅色基础图表选项 */
+  /* 创建深色基础图表选项 */
   function createLightBaseOption() {
     return {
       ...lightChartTheme,
       grid: { left: 60, right: 30, top: 40, bottom: 50 },
       tooltip: {
         trigger: 'axis' as const,
-        backgroundColor: 'rgba(255,255,255,0.95)',
-        borderColor: '#E5E7EB',
-        textStyle: { color: '#374151' },
+        backgroundColor: 'rgba(26, 27, 46, 0.9)',
+        borderColor: 'rgba(45, 49, 66, 0.5)',
+        textStyle: { color: '#F3F4F6' },
       },
-      legend: { textStyle: { color: '#374151' }, pageTextStyle: { color: '#374151' } },
+      legend: { textStyle: { color: '#9CA3AF' }, pageTextStyle: { color: '#9CA3AF' } },
       xAxis: {
         type: 'category' as const,
-        axisLine: { lineStyle: { color: '#D1D5DB' } },
-        axisLabel: { color: '#6B7280' },
+        axisLine: { lineStyle: { color: '#374151' } },
+        axisLabel: { color: '#9CA3AF' },
         splitLine: { show: false },
       },
       yAxis: {
         type: 'value' as const,
-        axisLine: { lineStyle: { color: '#D1D5DB' } },
-        axisLabel: { color: '#6B7280' },
-        splitLine: { lineStyle: { color: '#F3F4F6' } },
+        axisLine: { lineStyle: { color: '#374151' } },
+        axisLabel: { color: '#9CA3AF' },
+        splitLine: { lineStyle: { color: 'rgba(55, 65, 81, 0.4)' } },
       },
       dataZoom: [{ type: 'inside' as const, start: 0, end: 100 }],
     }
@@ -634,9 +634,9 @@ export function useChart() {
       title: { show: false },
       tooltip: {
         trigger: 'axis' as const,
-        backgroundColor: 'rgba(255,255,255,0.95)',
-        borderColor: '#E5E7EB',
-        textStyle: { color: '#374151' },
+        backgroundColor: 'rgba(26, 27, 46, 0.9)',
+        borderColor: 'rgba(45, 49, 66, 0.5)',
+        textStyle: { color: '#F3F4F6' },
         formatter: (params: any) => {
           const idx = params[0]?.dataIndex ?? 0
           const ev = events[idx]
@@ -651,15 +651,15 @@ export function useChart() {
       grid: { left: 120, right: 30, top: 40, bottom: 50 },
       xAxis: {
         type: 'time' as const,
-        axisLine: { lineStyle: { color: '#D1D5DB' } },
-        axisLabel: { color: '#6B7280', formatter: '{MM}-{dd}' },
-        splitLine: { lineStyle: { color: '#F3F4F6' } },
+        axisLine: { lineStyle: { color: '#374151' } },
+        axisLabel: { color: '#9CA3AF', formatter: '{MM}-{dd}' },
+        splitLine: { lineStyle: { color: 'rgba(55, 65, 81, 0.4)' } },
       },
       yAxis: {
         type: 'category' as const,
         data: categories,
-        axisLine: { lineStyle: { color: '#D1D5DB' } },
-        axisLabel: { color: '#6B7280', fontSize: 12 },
+        axisLine: { lineStyle: { color: '#374151' } },
+        axisLabel: { color: '#9CA3AF', fontSize: 12 },
       },
       series: events.map((ev, i) => ({
         name: ev.name,
@@ -775,15 +775,15 @@ export function useChart() {
         {
           type: 'value' as const,
           name: '日产量 (kg/ha)',
-          axisLine: { lineStyle: { color: '#D1D5DB' } },
-          axisLabel: { color: '#6B7280' },
-          splitLine: { lineStyle: { color: '#F3F4F6' } },
+          axisLine: { lineStyle: { color: '#374151' } },
+          axisLabel: { color: '#9CA3AF' },
+          splitLine: { lineStyle: { color: 'rgba(55, 65, 81, 0.4)' } },
         },
         {
           type: 'value' as const,
           name: '累积产量 (kg/ha)',
-          axisLine: { lineStyle: { color: '#D1D5DB' } },
-          axisLabel: { color: '#6B7280' },
+          axisLine: { lineStyle: { color: '#374151' } },
+          axisLabel: { color: '#9CA3AF' },
           splitLine: { show: false },
         },
       ],

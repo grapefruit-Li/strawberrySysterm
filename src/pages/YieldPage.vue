@@ -222,9 +222,9 @@ function exportAs(format: 'json' | 'csv') {
       v-if="simulation.status === 'idle'"
       class="v2-card p-12 text-center"
     >
-      <TrendingUp :size="48" class="mx-auto text-gray-400 mb-4" />
-      <h3 class="text-xl text-gray-600 mb-2">尚未运行模拟</h3>
-      <p class="text-gray-500">请先在基础信息页面完成配置并生成方案</p>
+      <TrendingUp :size="48" class="mx-auto text-midnight-400 mb-4" />
+      <h3 class="text-xl text-midnight-300 mb-2">尚未运行模拟</h3>
+      <p class="text-midnight-300">请先在基础信息页面完成配置并生成方案</p>
     </div>
 
     <template v-else>
@@ -237,11 +237,11 @@ function exportAs(format: 'json' | 'csv') {
         >
           <div :class="['absolute top-0 left-0 right-0 h-1', metric.accent]"></div>
           <div class="flex items-center gap-2 mb-1">
-            <component :is="metric.icon" :size="14" class="text-gray-500" />
-            <span class="text-xs text-gray-500 uppercase tracking-wider">{{ metric.label }}</span>
+            <component :is="metric.icon" :size="14" class="text-midnight-300" />
+            <span class="text-xs text-midnight-300 uppercase tracking-wider">{{ metric.label }}</span>
           </div>
-          <span class="text-2xl font-bold text-gray-800">{{ metric.value }}</span>
-          <span class="text-xs text-gray-400 mt-1">{{ metric.sub }}</span>
+          <span class="text-2xl font-bold text-midnight-100">{{ metric.value }}</span>
+          <span class="text-xs text-midnight-400 mt-1">{{ metric.sub }}</span>
         </div>
       </div>
 
@@ -294,11 +294,11 @@ function exportAs(format: 'json' | 'csv') {
                 v-for="(row, idx) in yieldDetailTable"
                 :key="idx"
                 class="border-b border-gray-100"
-                :class="idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'"
+                :class="idx % 2 === 0 ? 'bg-white' : 'bg-midnight-800/80'"
               >
-                <td class="py-2 px-3 text-gray-700 font-medium">{{ row.label }}</td>
-                <td class="py-2 px-3 text-center text-gray-800 font-bold">{{ row.value }}</td>
-                <td class="py-2 px-3 text-gray-500 text-sm">{{ row.note }}</td>
+                <td class="py-2 px-3 text-midnight-200 font-medium">{{ row.label }}</td>
+                <td class="py-2 px-3 text-center text-midnight-100 font-bold">{{ row.value }}</td>
+                <td class="py-2 px-3 text-midnight-300 text-sm">{{ row.note }}</td>
               </tr>
             </tbody>
           </table>
@@ -308,14 +308,14 @@ function exportAs(format: 'json' | 'csv') {
       <!-- 底部导出按钮 -->
       <div class="flex justify-center gap-4">
         <button
-          class="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-all duration-200"
+          class="flex items-center gap-2 px-4 py-2 rounded-lg border border-midnight-600/40 text-midnight-300 hover:bg-midnight-800/80 transition-all duration-200"
           @click="exportAs('csv')"
         >
           <FileSpreadsheet :size="16" />
           导出 CSV
         </button>
         <button
-          class="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-all duration-200"
+          class="flex items-center gap-2 px-4 py-2 rounded-lg border border-midnight-600/40 text-midnight-300 hover:bg-midnight-800/80 transition-all duration-200"
           @click="exportAs('json')"
         >
           <FileJson :size="16" />
