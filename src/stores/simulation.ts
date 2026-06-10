@@ -130,8 +130,6 @@ export const useSimulationStore = defineStore('simulation', () => {
     status.value = 'running'
     eventLog.value = []
     addEvent('info', '模拟开始运行')
-    // 生成模拟数据
-    generateResults()
   }
 
   /* 暂停模拟 */

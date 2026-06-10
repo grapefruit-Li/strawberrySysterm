@@ -157,17 +157,41 @@ export const useConfigStore = defineStore('config', () => {
 
   /* 加载预设数据 */
   function loadPreset() {
-    // 预设气象数据（30天示例）
+    // 根据定植日期和区域生成180天气象数据
+    const startDate = new Date(plantingDate.value)
+    const region = selectedRegion.value
+    const baseTavg = region?.avgTemp ?? 16
+    const baseAmp = region?.climateType === 'subtropical-highland' ? 8
+      : region?.climateType === 'mediterranean' ? 10
+      : region?.climateType === 'subtropical-monsoon' ? 9
+      : 8
+
     const baseWeather: WeatherRecord[] = []
-    for (let i = 0; i < 30; i++) {
-      const day = i + 1
-      const month = 3 // 3月
+    for (let i = 0; i < 180; i++) {
+      const d = new Date(startDate.getTime() + i * 86400000)
+      const dayOfYear = Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / 86400000)
+      // 正弦温度模型：基于年均温和年振幅
+      const tempOffset = baseAmp * Math.sin((dayOfYear - 80) / 365 * 2 * Math.PI)
+      const tavg = baseTavg + tempOffset
+      const diurnalRange = 8 + Math.random() * 4
+      const tmax = tavg + diurnalRange / 2
+      const tmin = tavg - diurnalRange / 2
+      // 降雨概率：根据气候类型调整
+      const rainProb = region?.climateType === 'mediterranean' ? 0.15
+        : region?.climateType === 'subtropical-monsoon' ? 0.35
+        : 0.25
+      const rain = Math.random() < rainProb ? Math.round(Math.random() * 25 * 10) / 10 : 0
+      // 太阳辐射：受降雨影响
+      const sradBase = 8 + 6 * Math.sin((dayOfYear - 80) / 365 * 2 * Math.PI)
+      const srad = rain > 0 ? sradBase * 0.5 : sradBase + Math.random() * 3
+
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       baseWeather.push({
-        date: `2025-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-        srad: 12 + Math.random() * 8,
-        tmax: 15 + Math.random() * 10,
-        tmin: 5 + Math.random() * 5,
-        rain: Math.random() > 0.7 ? Math.round(Math.random() * 20 * 10) / 10 : 0,
+        date: dateStr,
+        srad: Math.round(srad * 10) / 10,
+        tmax: Math.round(tmax * 10) / 10,
+        tmin: Math.round(tmin * 10) / 10,
+        rain,
         co2: 410,
       })
     }

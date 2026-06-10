@@ -86,7 +86,7 @@ function generatePlan() {
   if (!canGenerate.value) return
   config.loadPreset()
   runChainSimulation()
-  router.push('/phenology')
+  router.push('/v2/phenology')
 }
 
 /* 可靠度徽章颜色 */
