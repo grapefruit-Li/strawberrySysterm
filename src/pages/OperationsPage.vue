@@ -8,14 +8,11 @@ import { stageTimelines } from '@/data/stage-timelines'
 import VChart from 'vue-echarts'
 import {
   Droplets,
-  Fertilizer,
+  Sprout,
   Scissors,
   Shield,
-  Sprout,
   Cherry,
   CalendarCheck,
-  AlertCircle,
-  CheckCircle2,
   ListChecks,
   Info,
   Thermometer,
@@ -47,7 +44,7 @@ const summaryCards = computed(() => {
       value: `${Math.round(totalN / 10) * 10}-${Math.round(totalN / 10) * 10 + 50} kg N/ha`,
       sub: '分8-12次',
       accent: 'v2-accent-green',
-      icon: Fertilizer,
+      icon: Sprout,
     },
     {
       label: '覆膜',
@@ -230,8 +227,10 @@ function getStageBarStyle(stage: typeof stageBarConfig.value[0]) {
             :key="idx"
             class="flex items-center justify-center text-white text-xs font-medium transition-all"
             :style="getStageBarStyle(stage)"
-            :class="idx === 0 ? 'rounded-l-lg' : ''"
-            :class="idx === stageBarConfig.length - 1 ? 'rounded-r-lg' : ''"
+            :class="[
+              idx === 0 ? 'rounded-l-lg' : '',
+              idx === stageBarConfig.length - 1 ? 'rounded-r-lg' : ''
+            ]"
             style="min-width: 60px;"
           >
             <span class="truncate px-1">{{ stage.name }}</span>

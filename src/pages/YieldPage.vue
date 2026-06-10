@@ -166,8 +166,8 @@ const donutOption = computed(() => {
   const secondYield = Math.round(totalYield * secondRatio)
 
   return donutChartOption([
-    { name: '第一茬', value: firstYield, color: '#EF4444', ratio: Math.round(firstRatio * 100) },
-    { name: '第二茬', value: secondYield, color: '#FBBF24', ratio: Math.round(secondRatio * 100) },
+    { name: '第一茬', value: firstYield, color: '#EF4444' },
+    { name: '第二茬', value: secondYield, color: '#FBBF24' },
   ])
 })
 

@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useSimulationStore } from '@/stores/simulation'
 import { useConfigStore } from '@/stores/config'
 import { useChart } from '@/composables/useChart'
-import type { PestRiskRecord } from '@/engine/types'
+import type { PestRiskRecord, RiskLevel } from '@/engine/types'
 import VChart from 'vue-echarts'
 import {
   Shield,
@@ -30,10 +30,10 @@ const pestRisks = computed<PestRiskRecord[]>(() => simulation.pestRisks)
 const riskSummary = computed(() => {
   const risks = pestRisks.value
   const highCount = risks.filter(r => r.riskLevel === 'high' || r.riskLevel === 'critical').length
-  const maxRisk = risks.reduce((max, r) => {
+  const maxRiskLevel = risks.reduce<RiskLevel>((max, r) => {
     const level = { low: 0, medium: 1, high: 2, critical: 3 }
     return level[r.riskLevel] > level[max] ? r.riskLevel : max
-  }, 'low' as const)
+  }, 'low')
 
   const levelMap: Record<string, { label: string; class: string }> = {
     low: { label: '低风险', class: 'v2-accent-green' },
@@ -42,7 +42,7 @@ const riskSummary = computed(() => {
     critical: { label: '严重风险', class: 'v2-accent-purple' },
   }
 
-  const info = levelMap[maxRisk] || levelMap.low
+  const info = levelMap[maxRiskLevel] || levelMap.low
 
   return [
     { label: '风险等级', value: info.label, sub: '综合评估', accent: info.class, icon: Shield },

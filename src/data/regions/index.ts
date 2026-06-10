@@ -72,6 +72,9 @@ export const builtInRegions: RegionConfig[] = [
   kunmingRegion,
 ]
 
+/** 别名导出，兼容旧引用 */
+export { builtInRegions as regions }
+
 // ==================== 天气生成器 ====================
 
 /**

@@ -19,7 +19,7 @@ import {
 
 const router = useRouter()
 const config = useConfigStore()
-const { generateResults } = useSimulation()
+const { runChainSimulation } = useSimulation()
 const isGenerating = ref(false)
 
 /* 品种筛选 */
@@ -49,8 +49,11 @@ function selectCultivar(cultivar: CultivarFullParams) {
 }
 
 /* 选择区域 */
-function selectRegion(region: string) {
-  config.selectedRegion = region
+function selectRegion(regionId: string) {
+  const region = regions.find(r => r.id === regionId)
+  if (region) {
+    config.selectedRegion = region
+  }
 }
 
 /* 生成方案 */
@@ -58,7 +61,7 @@ async function generatePlan() {
   if (!config.selectedCultivar || !config.selectedRegion) return
   isGenerating.value = true
   config.simulationDays = 180
-  await generateResults()
+  await runChainSimulation()
   isGenerating.value = false
   router.push('/v2/phenology')
 }
@@ -175,15 +178,15 @@ async function generatePlan() {
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div
           v-for="r in regions"
-          :key="r.code"
+          :key="r.id"
           class="p-4 rounded-lg border-2 transition-all duration-200 cursor-pointer relative"
-          :class="config.selectedRegion === r.code
+          :class="config.selectedRegion?.id === r.id
             ? 'border-blue-400 bg-blue-50 shadow-md shadow-blue-400/10'
             : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'"
-          @click="selectRegion(r.code)"
+          @click="selectRegion(r.id)"
         >
           <CheckCircle2
-            v-if="config.selectedRegion === r.code"
+            v-if="config.selectedRegion?.id === r.id"
             :size="18"
             class="absolute top-3 right-3 text-blue-500"
           />
@@ -201,8 +204,8 @@ async function generatePlan() {
           <div class="grid grid-cols-2 gap-1 text-xs text-gray-500 mt-2">
             <div>年均温: {{ r.avgTemp }}°C</div>
             <div>年降雨: {{ r.annualRain }}mm</div>
-            <div>生长季: {{ r.growingSeasonDays }}天</div>
-            <div>纬度: {{ r.latitude }}°</div>
+            <div>生长季: {{ r.growingSeason }}</div>
+            <div>纬度: {{ r.lat }}°</div>
           </div>
         </div>
       </div>
@@ -258,7 +261,7 @@ async function generatePlan() {
           </div>
           <div>
             <span class="text-gray-500">区域海拔</span>
-            <p class="font-medium text-gray-800">{{ config.selectedRegionFull?.elevation ?? '-' }}m</p>
+            <p class="font-medium text-gray-800">{{ config.selectedRegion?.elevation ?? '-' }}m</p>
           </div>
         </div>
       </div>

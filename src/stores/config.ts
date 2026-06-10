@@ -126,6 +126,16 @@ export const useConfigStore = defineStore('config', () => {
   /* 新增：选中的品种完整参数 */
   const selectedCultivarFull = ref<CultivarFullParams | null>(null)
 
+  /* 新增：选中品种编码（用于BasicInfoPage选择状态） */
+  const selectedCultivar = ref('')
+
+  /* 新增：品种搜索和筛选 */
+  const cultivarSearch = ref('')
+  const cultivarTypeFilter = ref('')
+
+  /* 新增：模拟天数 */
+  const simulationDays = ref(180)
+
   /* 管理配置 */
   const plantingDate = ref('2025-03-01')
   const plantingDensity = ref(8000)
@@ -148,6 +158,7 @@ export const useConfigStore = defineStore('config', () => {
 
   /* 设置品种完整参数 */
   function setCultivarFull(cultivar: CultivarFullParams) {
+    selectedCultivar.value = cultivar.code
     selectedCultivarFull.value = cultivar
     cultivarName.value = cultivar.name
     cultivarParams.maxLai = cultivar.cultivarParams.laimax
@@ -301,8 +312,9 @@ export const useConfigStore = defineStore('config', () => {
     stationName, stationLat, stationLon, stationElev, weatherData,
     soilName, soilLayers,
     cultivarName, cultivarParams,
-    selectedRegion, selectedCultivarFull,
+    selectedRegion, selectedCultivar, selectedCultivarFull,
     plantingDate, plantingDensity, irrigationEvents, fertilizerEvents,
+    cultivarSearch, cultivarTypeFilter, simulationDays,
     getRegions, setRegion, setCultivarFull, loadPreset,
     addSoilLayer, removeSoilLayer,
     addIrrigation, removeIrrigation, addFertilizer, removeFertilizer,

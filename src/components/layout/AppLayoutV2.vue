@@ -10,10 +10,13 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowLeft,
+  BookOpen,
 } from 'lucide-vue-next'
+import ManualDrawer from '@/components/ManualDrawer.vue'
 
 const route = useRoute()
 const router = useRouter()
+const showManual = ref(false)
 
 /* 侧边栏折叠状态 */
 const sidebarCollapsed = ref(false)
@@ -123,6 +126,14 @@ const currentPageTitle = computed(() => {
 
         <!-- 右侧操作 -->
         <div class="flex items-center gap-3">
+          <!-- 查看手册 -->
+          <button
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition-all duration-200"
+            @click="showManual = true"
+          >
+            <BookOpen :size="14" />
+            <span>使用手册</span>
+          </button>
           <!-- 返回版本选择 -->
           <button
             class="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-all duration-200"
@@ -139,6 +150,13 @@ const currentPageTitle = computed(() => {
         <router-view />
       </main>
     </div>
+
+    <!-- 手册抽屉 -->
+    <ManualDrawer
+      v-if="showManual"
+      version="v2"
+      @close="showManual = false"
+    />
   </div>
 </template>
 

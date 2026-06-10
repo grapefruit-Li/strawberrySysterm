@@ -125,13 +125,16 @@ export function useChart() {
   ) {
     return {
       ...baseOption,
-      title: { text: title, left: 'center' },
+      title: { show: false },
       xAxis: { ...baseOption.xAxis, data: xData },
+      legend: { ...baseOption.legend, bottom: 0, left: 'center' },
+      grid: { ...baseOption.grid, bottom: 80 },
       series: series.map((s, i) => ({
         name: s.name,
         type: 'line' as const,
         data: s.data,
         smooth: true,
+        symbol: 'none',
         lineStyle: { width: 2 },
         itemStyle: { color: s.color || Object.values(colors)[i % 7] },
         areaStyle: i === 0 ? {
@@ -156,8 +159,10 @@ export function useChart() {
   ) {
     return {
       ...baseOption,
-      title: { text: title, left: 'center' },
+      title: { show: false },
       xAxis: { ...baseOption.xAxis, data: xData },
+      legend: { ...baseOption.legend, bottom: 0, left: 'center' },
+      grid: { ...baseOption.grid, bottom: 80 },
       series: series.map((s, i) => ({
         name: s.name,
         type: 'bar' as const,
@@ -178,8 +183,10 @@ export function useChart() {
   ) {
     return {
       ...baseOption,
-      title: { text: title, left: 'center' },
+      title: { show: false },
       xAxis: { ...baseOption.xAxis, type: 'value' as const },
+      legend: { ...baseOption.legend, bottom: 0, left: 'center' },
+      grid: { ...baseOption.grid, bottom: 80 },
       series: series.map((s, i) => ({
         name: s.name,
         type: 'scatter' as const,
@@ -193,7 +200,7 @@ export function useChart() {
   /* 甘特图时间轴选项 - 物候阶段 */
   function ganttTimelineOption(events: import('@/engine/types').PhenologyEvent[]) {
     if (events.length === 0) {
-      return { ...baseOption, title: { text: '物候甘特图', left: 'center' }, xAxis: { ...baseOption.xAxis, data: [] }, series: [] }
+      return { ...baseOption, title: { show: false }, xAxis: { ...baseOption.xAxis, data: [] }, series: [] }
     }
 
     /* 将YYYYMMDD数字转为可读日期 */
@@ -216,7 +223,7 @@ export function useChart() {
 
     return {
       ...baseOption,
-      title: { text: '物候甘特图', left: 'center' },
+      title: { show: false },
       tooltip: {
         trigger: 'axis' as const,
         backgroundColor: 'rgba(26, 27, 46, 0.9)',
@@ -282,7 +289,7 @@ export function useChart() {
   /* 风险指数折线图选项 */
   function riskIndexOption(pestRisks: import('@/engine/types').PestRiskRecord[]) {
     if (pestRisks.length === 0) {
-      return { ...baseOption, title: { text: '风险指数趋势', left: 'center' }, xAxis: { ...baseOption.xAxis, data: [] }, series: [] }
+      return { ...baseOption, title: { show: false }, xAxis: { ...baseOption.xAxis, data: [] }, series: [] }
     }
 
     /* 按日期排序并去重 */
@@ -301,12 +308,13 @@ export function useChart() {
 
     return {
       ...baseOption,
-      title: { text: '风险预警', left: 'center' },
+      title: { show: false },
       legend: {
         ...baseOption.legend,
-        top: 30,
+        bottom: 0,
+        left: 'center',
       },
-      grid: { left: 60, right: 30, top: 60, bottom: 50 },
+      grid: { left: 60, right: 30, top: 60, bottom: 80 },
       xAxis: { ...baseOption.xAxis, data: allDates },
       yAxis: {
         ...baseOption.yAxis,
@@ -318,6 +326,7 @@ export function useChart() {
         type: 'line' as const,
         data: allDates.map(date => date === String(p.dailyRiskIndex[0].date) ? riskLevelValue(p.riskLevel) : null),
         smooth: true,
+        symbol: 'none',
         lineStyle: { width: 2 },
         itemStyle: { color: riskColors[p.riskLevel] || Object.values(colors)[i % 7] },
         connectNulls: true,
@@ -331,7 +340,7 @@ export function useChart() {
     harvests: import('@/engine/types').HarvestRecord[]
   ) {
     if (dailyOutputs.length === 0) {
-      return { ...baseOption, title: { text: '产量曲线', left: 'center' }, xAxis: { ...baseOption.xAxis, data: [] }, series: [] }
+      return { ...baseOption, title: { show: false }, xAxis: { ...baseOption.xAxis, data: [] }, series: [] }
     }
 
     /* 将YYYYMMDD数字转为可读日期 */
@@ -352,9 +361,9 @@ export function useChart() {
 
     return {
       ...baseOption,
-      title: { text: '逐日产量曲线', left: 'center' },
-      legend: { ...baseOption.legend, top: 30 },
-      grid: { left: 60, right: 60, top: 60, bottom: 50 },
+      title: { show: false },
+      legend: { ...baseOption.legend, bottom: 0, left: 'center' },
+      grid: { left: 60, right: 60, top: 60, bottom: 80 },
       xAxis: { ...baseOption.xAxis, data: dates },
       yAxis: [
         {
@@ -386,6 +395,7 @@ export function useChart() {
           yAxisIndex: 1,
           data: cumulativeYield,
           smooth: true,
+          symbol: 'none',
           lineStyle: { width: 2, color: colors.forest },
           itemStyle: { color: colors.forest },
           areaStyle: {
@@ -406,7 +416,7 @@ export function useChart() {
   /* 品质散点图选项 */
   function qualityScatterOption(harvests: import('@/engine/types').HarvestRecord[]) {
     if (harvests.length === 0) {
-      return { ...baseOption, title: { text: '品质预测', left: 'center' }, xAxis: { ...baseOption.xAxis, data: [] }, series: [] }
+      return { ...baseOption, title: { show: false }, xAxis: { ...baseOption.xAxis, data: [] }, series: [] }
     }
 
     function formatDate(dateNum: number): string {
@@ -416,9 +426,9 @@ export function useChart() {
 
     return {
       ...baseOption,
-      title: { text: '品质预测散点图', left: 'center' },
-      legend: { ...baseOption.legend, top: 30 },
-      grid: { left: 60, right: 30, top: 60, bottom: 50 },
+      title: { show: false },
+      legend: { ...baseOption.legend, bottom: 0, left: 'center' },
+      grid: { left: 60, right: 30, top: 60, bottom: 80 },
       xAxis: {
         type: 'category' as const,
         data: harvests.map(h => formatDate(h.date)),
@@ -521,13 +531,16 @@ export function useChart() {
     const lightBase = createLightBaseOption()
     return {
       ...lightBase,
-      title: { text: title, left: 'center' },
+      title: { show: false },
       xAxis: { ...lightBase.xAxis, data: xData },
+      legend: { ...lightBase.legend, bottom: 0, left: 'center' },
+      grid: { ...lightBase.grid, bottom: 80 },
       series: series.map((s, i) => ({
         name: s.name,
         type: 'line' as const,
         data: s.data,
         smooth: true,
+        symbol: 'none',
         lineStyle: { width: 2 },
         itemStyle: { color: s.color || Object.values(colors)[i % 7] },
         areaStyle: i === 0 ? {
@@ -553,8 +566,10 @@ export function useChart() {
     const lightBase = createLightBaseOption()
     return {
       ...lightBase,
-      title: { text: title, left: 'center' },
+      title: { show: false },
       xAxis: { ...lightBase.xAxis, data: xData },
+      legend: { ...lightBase.legend, bottom: 0, left: 'center' },
+      grid: { ...lightBase.grid, bottom: 80 },
       series: series.map((s, i) => ({
         name: s.name,
         type: 'bar' as const,
@@ -576,8 +591,10 @@ export function useChart() {
     const lightBase = createLightBaseOption()
     return {
       ...lightBase,
-      title: { text: title, left: 'center' },
+      title: { show: false },
       xAxis: { ...lightBase.xAxis, type: 'value' as const },
+      legend: { ...lightBase.legend, bottom: 0, left: 'center' },
+      grid: { ...lightBase.grid, bottom: 80 },
       series: series.map((s, i) => ({
         name: s.name,
         type: 'scatter' as const,
@@ -592,7 +609,7 @@ export function useChart() {
   function ganttTimelineLightOption(events: import('@/engine/types').PhenologyEvent[]) {
     if (events.length === 0) {
       const lightBase = createLightBaseOption()
-      return { ...lightBase, title: { text: '物候甘特图', left: 'center' }, xAxis: { ...lightBase.xAxis, data: [] }, series: [] }
+      return { ...lightBase, title: { show: false }, xAxis: { ...lightBase.xAxis, data: [] }, series: [] }
     }
 
     function formatDate(dateNum: number): string {
@@ -614,7 +631,7 @@ export function useChart() {
 
     return {
       ...createLightBaseOption(),
-      title: { text: '物候甘特图', left: 'center' },
+      title: { show: false },
       tooltip: {
         trigger: 'axis' as const,
         backgroundColor: 'rgba(255,255,255,0.95)',
@@ -681,7 +698,7 @@ export function useChart() {
   function riskIndexLightOption(pestRisks: import('@/engine/types').PestRiskRecord[]) {
     const lightBase = createLightBaseOption()
     if (pestRisks.length === 0) {
-      return { ...lightBase, title: { text: '风险指数趋势', left: 'center' }, xAxis: { ...lightBase.xAxis, data: [] }, series: [] }
+      return { ...lightBase, title: { show: false }, xAxis: { ...lightBase.xAxis, data: [] }, series: [] }
     }
 
     const allDates = [...new Set(pestRisks.map(p => String(p.dailyRiskIndex[0].date)))].sort()
@@ -698,12 +715,13 @@ export function useChart() {
 
     return {
       ...lightBase,
-      title: { text: '风险预警', left: 'center' },
+      title: { show: false },
       legend: {
         ...lightBase.legend,
-        top: 30,
+        bottom: 0,
+        left: 'center',
       },
-      grid: { left: 60, right: 30, top: 60, bottom: 50 },
+      grid: { left: 60, right: 30, top: 60, bottom: 80 },
       xAxis: { ...lightBase.xAxis, data: allDates },
       yAxis: {
         ...lightBase.yAxis,
@@ -715,6 +733,7 @@ export function useChart() {
         type: 'line' as const,
         data: allDates.map(date => date === String(p.dailyRiskIndex[0].date) ? riskLevelValue(p.riskLevel) : null),
         smooth: true,
+        symbol: 'none',
         lineStyle: { width: 2 },
         itemStyle: { color: riskColors[p.riskLevel] || Object.values(colors)[i % 7] },
         connectNulls: true,
@@ -729,7 +748,7 @@ export function useChart() {
   ) {
     const lightBase = createLightBaseOption()
     if (dailyOutputs.length === 0) {
-      return { ...lightBase, title: { text: '产量曲线', left: 'center' }, xAxis: { ...lightBase.xAxis, data: [] }, series: [] }
+      return { ...lightBase, title: { show: false }, xAxis: { ...lightBase.xAxis, data: [] }, series: [] }
     }
 
     function formatDate(dateNum: number): string {
@@ -748,9 +767,9 @@ export function useChart() {
 
     return {
       ...lightBase,
-      title: { text: '逐日产量曲线', left: 'center' },
-      legend: { ...lightBase.legend, top: 30 },
-      grid: { left: 60, right: 60, top: 60, bottom: 50 },
+      title: { show: false },
+      legend: { ...lightBase.legend, bottom: 0, left: 'center' },
+      grid: { left: 60, right: 60, top: 60, bottom: 80 },
       xAxis: { ...lightBase.xAxis, data: dates },
       yAxis: [
         {
@@ -774,6 +793,7 @@ export function useChart() {
           type: 'line' as const,
           data: dailyYield,
           smooth: true,
+          symbol: 'none',
           lineStyle: { width: 2, color: '#EF4444' },
           itemStyle: { color: '#EF4444' },
           areaStyle: {
@@ -793,6 +813,7 @@ export function useChart() {
           yAxisIndex: 1,
           data: cumulativeYield,
           smooth: true,
+          symbol: 'none',
           lineStyle: { width: 2, color: colors.forest },
           itemStyle: { color: colors.forest },
           areaStyle: {
@@ -814,6 +835,7 @@ export function useChart() {
   function donutChartOption(data: { name: string; value: number; color: string }[]) {
     return {
       ...lightChartTheme,
+      title: { show: false },
       tooltip: {
         trigger: 'item' as const,
         backgroundColor: 'rgba(255,255,255,0.95)',
@@ -821,7 +843,7 @@ export function useChart() {
         textStyle: { color: '#374151' },
       },
       legend: {
-        top: '5%',
+        bottom: 0,
         left: 'center',
         textStyle: { color: '#374151' },
       },
