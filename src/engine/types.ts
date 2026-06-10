@@ -601,6 +601,25 @@ export interface CultivarFullParams {
   reliability: number
   cultivarParams: CultivarParams
   ecotypeParams: EcotypeParams
+  /** V2新增：需冷量 (小时) — 从 DSSAT 文献补充 */
+  chillingRequirement?: number
+  /** V2新增：营养生长期积温 (°C·d) — P1V + P1R 计算 */
+  vegGdd?: number
+  /** V2新增：开花至成熟天数 */
+  flowerToMature?: number
+  /** V2新增：第一茬占比 (0-1) */
+  firstFlushRatio?: number
+  /** V2新增：第二茬占比 (0-1) */
+  secondFlushRatio?: number
+}
+
+/** V2新增：农事阶段时间轴 */
+export interface StageTimeline {
+  name: string
+  startMonth: number
+  endMonth: number
+  color: string
+  operations: string[]
 }
 
 /** 物候事件 */

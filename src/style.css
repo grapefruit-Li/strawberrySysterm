@@ -97,6 +97,141 @@ body {
     @apply flex items-center gap-3 px-4 py-3 rounded-lg text-strawberry-400
            bg-strawberry-500/10 border border-strawberry-500/20;
   }
+
+  /* ===== V2 Light Theme ===== */
+
+  .v2-card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-200;
+  }
+
+  .v2-stat-card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col gap-1 relative overflow-hidden;
+  }
+
+  .v2-input {
+    @apply bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400/20 transition-all duration-200;
+  }
+
+  .v2-section-title {
+    @apply text-lg font-heading text-gray-800 mb-4;
+  }
+
+  .v2-table {
+    @apply w-full text-sm;
+  }
+
+  .v2-table th {
+    @apply text-left py-2 px-3 text-gray-500 font-medium border-b border-gray-200 bg-gray-50;
+  }
+
+  .v2-table td {
+    @apply py-1.5 px-3 text-gray-700;
+  }
+
+  .v2-table tbody tr {
+    @apply border-b border-gray-100;
+  }
+
+  .v2-table tbody tr:hover {
+    @apply bg-gray-50;
+  }
+
+  .v2-btn-primary {
+    @apply bg-red-500 hover:bg-red-600 text-white font-semibold px-5 py-2.5 rounded-lg transition-all duration-200 shadow-lg shadow-red-500/25 hover:shadow-red-500/40 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .v2-badge-low {
+    @apply bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full;
+  }
+
+  .v2-badge-medium {
+    @apply bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded-full;
+  }
+
+  .v2-badge-high {
+    @apply bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full;
+  }
+
+  .v2-badge-critical {
+    @apply bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full;
+  }
+
+  .v2-nav-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-all duration-200 cursor-pointer;
+  }
+
+  .v2-nav-item-active {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg text-white bg-white/15 border-l-2 border-red-400 cursor-pointer;
+  }
+
+  .v2-header {
+    @apply h-16 flex items-center justify-between px-6 border-b border-gray-200 bg-white shrink-0;
+  }
+
+  .v2-main {
+    @apply flex-1 overflow-y-auto p-6 bg-gray-50;
+  }
+
+  /* V2 stat card accent bars */
+  .v2-accent-red::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    @apply bg-red-500;
+  }
+
+  .v2-accent-green::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    @apply bg-green-500;
+  }
+
+  .v2-accent-blue::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    @apply bg-blue-500;
+  }
+
+  .v2-accent-orange::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    @apply bg-orange-500;
+  }
+
+  .v2-accent-purple::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    @apply bg-purple-500;
+  }
+
+  .v2-accent-gray::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    @apply bg-gray-500;
+  }
 }
 
 /* ECharts 容器 */

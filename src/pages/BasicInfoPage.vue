@@ -2,369 +2,278 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useConfigStore } from '@/stores/config'
-import { useSimulationStore } from '@/stores/simulation'
 import { useSimulation } from '@/composables/useSimulation'
-import type { CultivarFullParams, RegionConfig } from '@/engine/types'
+import type { CultivarFullParams } from '@/engine/types'
+import { strawberryCultivars } from '@/data/cultivars/strawberry-cultivars'
+import { regions } from '@/data/regions'
 import {
-  Search,
+  Cherry,
   MapPin,
   Calendar,
-  Sprout,
-  ChevronRight,
-  Star,
-  Thermometer,
-  Droplets,
-  Zap,
-  Check,
+  Search,
+  CheckCircle2,
+  Circle,
+  Sparkles,
+  Loader2,
 } from 'lucide-vue-next'
 
 const router = useRouter()
 const config = useConfigStore()
-const simulation = useSimulationStore()
-const { runChainSimulation } = useSimulation()
+const { generateResults } = useSimulation()
+const isGenerating = ref(false)
 
-/* 品种搜索和筛选 */
-const cultivarSearch = ref('')
-const cultivarFilter = ref<'all' | '短日型' | '日中性'>('all')
-
-/* 内置品种数据 - 使用 strawberryCultivars */
-import { strawberryCultivars } from '@/data/cultivars/strawberry-cultivars'
-
-const cultivars = ref<CultivarFullParams[]>(strawberryCultivars)
-
-/* 区域列表 */
-const regions = computed(() => config.getRegions())
-
-/* 筛选后的品种列表 */
-const filteredCultivars = computed(() => {
-  let list = cultivars.value
-  if (cultivarFilter.value !== 'all') {
-    list = list.filter(c => c.type === cultivarFilter.value)
-  }
-  if (cultivarSearch.value) {
-    const q = cultivarSearch.value.toLowerCase()
-    list = list.filter(c =>
-      c.name.toLowerCase().includes(q) ||
-      c.origin.toLowerCase().includes(q) ||
-      c.fruitDesc.toLowerCase().includes(q)
-    )
-  }
-  return list
+/* 品种筛选 */
+const cultivarSearch = computed({
+  get: () => config.cultivarSearch,
+  set: (v) => { config.cultivarSearch = v },
 })
 
-/* 选中的品种 */
-const selectedCultivarCode = computed(() => config.selectedCultivarFull?.code ?? '')
+const cultivarTypeFilter = computed({
+  get: () => config.cultivarTypeFilter,
+  set: (v) => { config.cultivarTypeFilter = v },
+})
 
-/* 选中的区域 */
-const selectedRegionId = computed(() => config.selectedRegion?.id ?? '')
-
-/* 配置摘要卡片 */
-const summaryCards = computed(() => [
-  { label: '品种', value: config.cultivarName || '未选择', icon: Sprout },
-  { label: '定植日期', value: config.plantingDate || '未设置', icon: Calendar },
-  { label: '区域', value: config.selectedRegion?.name || '未选择', icon: MapPin },
-  { label: '预计采收天数', value: config.selectedCultivarFull ? `${config.selectedCultivarFull.cultivarParams.p1v + config.selectedCultivarFull.cultivarParams.p3 + config.selectedCultivarFull.cultivarParams.p4} GDD` : '-', icon: Thermometer },
-])
-
-/* 是否可以生成方案 */
-const canGenerate = computed(() => {
-  return config.selectedCultivarFull !== null && config.selectedRegion !== null && config.plantingDate !== ''
+const filteredCultivars = computed<CultivarFullParams[]>(() => {
+  return strawberryCultivars.filter(c => {
+    const matchSearch = !cultivarSearch.value ||
+      c.name.toLowerCase().includes(cultivarSearch.value.toLowerCase()) ||
+      c.code.toLowerCase().includes(cultivarSearch.value.toLowerCase())
+    const matchType = !cultivarTypeFilter.value || c.type === cultivarTypeFilter.value
+    return matchSearch && matchType
+  })
 })
 
 /* 选择品种 */
-function selectCultivar(c: CultivarFullParams) {
-  config.setCultivarFull(c)
+function selectCultivar(cultivar: CultivarFullParams) {
+  config.selectedCultivar = cultivar.code
 }
 
 /* 选择区域 */
-function selectRegion(r: RegionConfig) {
-  config.setRegion(r)
+function selectRegion(region: string) {
+  config.selectedRegion = region
 }
 
 /* 生成方案 */
-function generatePlan() {
-  if (!canGenerate.value) return
-  config.loadPreset()
-  runChainSimulation()
+async function generatePlan() {
+  if (!config.selectedCultivar || !config.selectedRegion) return
+  isGenerating.value = true
+  config.simulationDays = 180
+  await generateResults()
+  isGenerating.value = false
   router.push('/v2/phenology')
-}
-
-/* 可靠度徽章颜色 */
-function reliabilityColor(level: number): string {
-  if (level >= 5) return 'text-forest-400 bg-forest-500/20'
-  if (level >= 4) return 'text-blue-400 bg-blue-500/20'
-  if (level >= 3) return 'text-amber-400 bg-amber-500/20'
-  return 'text-midnight-400 bg-midnight-500/20'
-}
-
-/* 判断品种类型 */
-function cultivarType(c: CultivarFullParams): string {
-  return c.type
 }
 </script>
 
 <template>
   <div class="space-y-6">
-    <!-- 顶部配置摘要卡片 -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div
-        v-for="card in summaryCards"
-        :key="card.label"
-        class="stat-card"
-      >
-        <div class="flex items-center gap-2 mb-1">
-          <component :is="card.icon" :size="14" class="text-strawberry-400" />
-          <span class="stat-label">{{ card.label }}</span>
-        </div>
-        <span class="stat-value text-lg">{{ card.value }}</span>
-      </div>
+    <!-- 页面标题 -->
+    <div>
+      <h1 class="text-2xl font-heading text-gray-800 mb-1">基础信息</h1>
+      <p class="text-gray-500 text-sm">选择品种、区域和定植配置，启动链式决策引擎</p>
     </div>
 
-    <!-- 三列主内容 -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-      <!-- 左列：品种选择 -->
-      <div class="glass-card p-5">
-        <h2 class="section-title flex items-center gap-2">
-          <Sprout :size="20" class="text-strawberry-400" />
-          品种选择
+    <!-- 品种选择 -->
+    <div class="v2-card p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="v2-section-title flex items-center gap-2 mb-0">
+          <Cherry :size="18" class="text-red-500" />
+          选择品种
         </h2>
-
-        <!-- 搜索和筛选 -->
-        <div class="flex gap-2 mb-4">
-          <div class="relative flex-1">
-            <Search :size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-midnight-400" />
+        <div class="flex items-center gap-3">
+          <select
+            v-model="cultivarTypeFilter"
+            class="v2-input text-sm py-1.5 px-3"
+          >
+            <option value="">全部类型</option>
+            <option value="短日型">短日型</option>
+            <option value="日中性">日中性</option>
+          </select>
+          <div class="relative">
+            <Search :size="14" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               v-model="cultivarSearch"
               type="text"
               placeholder="搜索品种..."
-              class="input-field pl-9 text-sm"
+              class="v2-input pl-9 py-1.5 text-sm"
             />
-          </div>
-          <select
-            v-model="cultivarFilter"
-            class="input-field w-auto text-sm"
-          >
-            <option value="all">全部</option>
-            <option value="短日型">短日型</option>
-            <option value="日中性">日中性</option>
-          </select>
-        </div>
-
-        <!-- 品种卡片列表 -->
-        <div class="space-y-3 max-h-[480px] overflow-y-auto pr-1">
-          <div
-            v-for="c in filteredCultivars"
-            :key="c.code"
-            class="p-3 rounded-lg border cursor-pointer transition-all duration-200"
-            :class="selectedCultivarCode === c.code
-              ? 'border-strawberry-500/50 bg-strawberry-500/10'
-              : 'border-midnight-600/30 bg-midnight-800/40 hover:border-midnight-500/50'"
-            @click="selectCultivar(c)"
-          >
-            <!-- 品种头部 -->
-            <div class="flex items-center justify-between mb-2">
-              <div class="flex items-center gap-2">
-                <span class="font-heading text-midnight-50">{{ c.name }}</span>
-                <span
-                  class="text-xs px-2 py-0.5 rounded-full"
-                  :class="cultivarType(c) === '短日型' ? 'bg-amber-500/20 text-amber-400' : 'bg-cyan-500/20 text-cyan-400'"
-                >
-                  {{ cultivarType(c) }}
-                </span>
-              </div>
-              <div
-                v-if="selectedCultivarCode === c.code"
-                class="w-5 h-5 rounded-full bg-strawberry-500 flex items-center justify-center"
-              >
-                <Check :size="12" class="text-white" />
-              </div>
-            </div>
-
-            <!-- 英文名 -->
-            <p class="text-xs text-midnight-400 mb-2">{{ c.origin }}</p>
-
-            <!-- 关键参数 -->
-            <div class="grid grid-cols-2 gap-2 text-xs">
-              <div class="flex items-center gap-1">
-                <span class="text-midnight-500">单果重:</span>
-                <span class="text-midnight-200">{{ c.keyParams.avgFruitWeight }}g</span>
-              </div>
-              <div class="flex items-center gap-1">
-                <span class="text-midnight-500">SSC:</span>
-                <span class="text-midnight-200">{{ c.keyParams.ssc }}%</span>
-              </div>
-              <div class="flex items-center gap-1">
-                <span class="text-midnight-500">硬度:</span>
-                <span class="text-midnight-200">{{ c.keyParams.firmness }}N</span>
-              </div>
-              <div class="flex items-center gap-1">
-                <span class="text-midnight-500">收获指数:</span>
-                <span class="text-midnight-200">{{ c.keyParams.harvestIndex }}</span>
-              </div>
-            </div>
-
-            <!-- 数据可信度 -->
-            <div class="flex items-center gap-1 mt-2">
-              <span class="text-xs text-midnight-500">数据可信度:</span>
-              <span
-                class="text-xs px-1.5 py-0.5 rounded"
-                :class="reliabilityColor(c.reliability)"
-              >
-                <Star :size="10" class="inline" /> {{ c.reliability }}/5
-              </span>
-            </div>
-          </div>
-
-          <!-- 无结果 -->
-          <div
-            v-if="filteredCultivars.length === 0"
-            class="text-center py-8 text-midnight-500 text-sm"
-          >
-            未找到匹配的品种
           </div>
         </div>
       </div>
 
-      <!-- 中列：种植区域 -->
-      <div class="glass-card p-5">
-        <h2 class="section-title flex items-center gap-2">
-          <MapPin :size="20" class="text-forest-400" />
-          种植区域
-        </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto pr-2">
+        <div
+          v-for="c in filteredCultivars"
+          :key="c.code"
+          class="p-4 rounded-lg border-2 transition-all duration-200 cursor-pointer relative"
+          :class="config.selectedCultivar === c.code
+            ? 'border-red-400 bg-red-50 shadow-md shadow-red-400/10'
+            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'"
+          @click="selectCultivar(c)"
+        >
+          <CheckCircle2
+            v-if="config.selectedCultivar === c.code"
+            :size="18"
+            class="absolute top-3 right-3 text-red-500"
+          />
+          <Circle
+            v-else
+            :size="18"
+            class="absolute top-3 right-3 text-gray-300"
+          />
 
-        <div class="space-y-3">
-          <div
-            v-for="r in regions"
-            :key="r.id"
-            class="p-4 rounded-lg border cursor-pointer transition-all duration-200"
-            :class="selectedRegionId === r.id
-              ? 'border-forest-500/50 bg-forest-500/10'
-              : 'border-midnight-600/30 bg-midnight-800/40 hover:border-midnight-500/50'"
-            @click="selectRegion(r)"
-          >
-            <!-- 区域头部 -->
-            <div class="flex items-center justify-between mb-2">
-              <div class="flex items-center gap-2">
-                <MapPin :size="16" class="text-forest-400" />
-                <span class="font-heading text-midnight-50">{{ r.name }}</span>
-                <span class="text-xs text-midnight-400">{{ r.climateType }}</span>
-              </div>
-              <div
-                v-if="selectedRegionId === r.id"
-                class="w-5 h-5 rounded-full bg-forest-500 flex items-center justify-center"
-              >
-                <Check :size="12" class="text-white" />
-              </div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-sm font-bold text-gray-800">{{ c.name }}</span>
+            <span class="text-xs px-2 py-0.5 rounded-full"
+                  :class="c.type === '日中性' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'">
+              {{ c.type }}
+            </span>
+          </div>
+
+          <p class="text-xs text-gray-500 mb-3 line-clamp-2">{{ c.fruitDesc }}</p>
+
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="flex items-center gap-1 text-gray-600">
+              <span class="text-gray-400">单果重</span>
+              <span class="font-medium">{{ c.keyParams.avgFruitWeight }}g</span>
             </div>
-
-            <!-- 气候摘要 -->
-            <div class="grid grid-cols-2 gap-2 text-xs mt-2">
-              <div class="flex items-center gap-1">
-                <Thermometer :size="12" class="text-amber-400" />
-                <span class="text-midnight-500">年均温:</span>
-                <span class="text-midnight-200">{{ r.avgTemp }}°C</span>
-              </div>
-              <div class="flex items-center gap-1">
-                <Droplets :size="12" class="text-blue-400" />
-                <span class="text-midnight-500">年降雨:</span>
-                <span class="text-midnight-200">{{ r.annualRain }}mm</span>
-              </div>
-              <div class="flex items-center gap-1">
-                <Calendar :size="12" class="text-forest-400" />
-                <span class="text-midnight-500">生长季:</span>
-                <span class="text-midnight-200">{{ r.growingSeason }}</span>
-              </div>
-              <div class="flex items-center gap-1">
-                <MapPin :size="12" class="text-strawberry-400" />
-                <span class="text-midnight-500">纬度:</span>
-                <span class="text-midnight-200">{{ r.lat }}°</span>
-              </div>
+            <div class="flex items-center gap-1 text-gray-600">
+              <span class="text-gray-400">糖度</span>
+              <span class="font-medium">{{ c.keyParams.ssc }}°Brix</span>
+            </div>
+            <div class="flex items-center gap-1 text-gray-600">
+              <span class="text-gray-400">硬度</span>
+              <span class="font-medium">{{ c.keyParams.firmness }}</span>
+            </div>
+            <div class="flex items-center gap-1 text-gray-600">
+              <span class="text-gray-400">收获指数</span>
+              <span class="font-medium">{{ c.keyParams.harvestIndex }}</span>
+            </div>
+            <div v-if="c.chillingRequirement !== undefined" class="flex items-center gap-1 text-gray-600">
+              <span class="text-gray-400">需冷量</span>
+              <span class="font-medium">{{ c.chillingRequirement }}h</span>
+            </div>
+            <div v-if="c.vegGdd !== undefined" class="flex items-center gap-1 text-gray-600">
+              <span class="text-gray-400">营养积温</span>
+              <span class="font-medium">{{ c.vegGdd }}°C·d</span>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- 右列：定植配置 -->
-      <div class="glass-card p-5">
-        <h2 class="section-title flex items-center gap-2">
-          <Calendar :size="20" class="text-amber-400" />
-          定植配置
-        </h2>
-
-        <div class="space-y-5">
-          <!-- 定植日期 -->
-          <div>
-            <label class="block text-sm text-midnight-300 mb-1.5">定植日期</label>
-            <input
-              v-model="config.plantingDate"
-              type="date"
-              class="input-field"
-            />
-          </div>
-
-          <!-- 种植密度 -->
-          <div>
-            <label class="block text-sm text-midnight-300 mb-1.5">种植密度 (株/ha)</label>
-            <input
-              v-model.number="config.plantingDensity"
-              type="number"
-              min="1000"
-              max="30000"
-              step="500"
-              class="input-field"
-            />
-          </div>
-
-          <!-- 目标采收期 -->
-          <div>
-            <label class="block text-sm text-midnight-300 mb-1.5">目标采收开始</label>
-            <input
-              type="date"
-              class="input-field"
-              :value="config.plantingDate"
-              disabled
-            />
-            <p class="text-xs text-midnight-500 mt-1">根据品种和定植日期自动计算</p>
-          </div>
-
-          <!-- 当前配置预览 -->
-          <div class="border-t border-midnight-600/30 pt-4">
-            <h3 class="text-sm font-medium text-midnight-200 mb-3">配置预览</h3>
-            <div class="space-y-2 text-sm">
-              <div class="flex justify-between">
-                <span class="text-midnight-400">品种类型</span>
-                <span class="text-midnight-200">{{ config.selectedCultivarFull ? cultivarType(config.selectedCultivarFull) : '-' }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-midnight-400">最大LAI</span>
-                <span class="text-midnight-200">{{ config.cultivarParams.maxLai }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-midnight-400">目标SSC</span>
-                <span class="text-midnight-200">{{ config.cultivarParams.sscTarget }}%</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-midnight-400">区域海拔</span>
-                <span class="text-midnight-200">{{ config.selectedRegion?.elevation ?? '-' }}m</span>
-              </div>
-            </div>
+          <div class="mt-3 flex items-center gap-1">
+            <Sparkles :size="10" class="text-amber-400" />
+            <span class="text-xs text-gray-400">数据可信度 {{ c.reliability }}/5</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 底部：生成方案按钮 -->
-    <div class="flex justify-center">
-      <button
-        class="strawberry-btn flex items-center gap-2 text-lg px-8 py-3"
-        :disabled="!canGenerate"
-        @click="generatePlan"
-      >
-        <Zap :size="20" />
-        生成方案
-        <ChevronRight :size="18" />
-      </button>
+    <!-- 种植区域 -->
+    <div class="v2-card p-5">
+      <h2 class="v2-section-title flex items-center gap-2">
+        <MapPin :size="18" class="text-blue-500" />
+        种植区域
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div
+          v-for="r in regions"
+          :key="r.code"
+          class="p-4 rounded-lg border-2 transition-all duration-200 cursor-pointer relative"
+          :class="config.selectedRegion === r.code
+            ? 'border-blue-400 bg-blue-50 shadow-md shadow-blue-400/10'
+            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'"
+          @click="selectRegion(r.code)"
+        >
+          <CheckCircle2
+            v-if="config.selectedRegion === r.code"
+            :size="18"
+            class="absolute top-3 right-3 text-blue-500"
+          />
+          <Circle
+            v-else
+            :size="18"
+            class="absolute top-3 right-3 text-gray-300"
+          />
+
+          <div class="flex items-center gap-2 mb-1">
+            <MapPin :size="14" class="text-blue-500" />
+            <span class="font-bold text-gray-800">{{ r.name }}</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-1 text-xs text-gray-500 mt-2">
+            <div>年均温: {{ r.avgTemp }}°C</div>
+            <div>年降雨: {{ r.annualRain }}mm</div>
+            <div>生长季: {{ r.growingSeasonDays }}天</div>
+            <div>纬度: {{ r.latitude }}°</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 定植配置 -->
+    <div class="v2-card p-5">
+      <h2 class="v2-section-title flex items-center gap-2">
+        <Calendar :size="18" class="text-green-500" />
+        定植配置
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">定植日期</label>
+          <input v-model="config.plantingDate" type="date" class="v2-input w-full" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">种植密度 (株/m²)</label>
+          <input
+            v-model.number="config.plantingDensity"
+            type="number"
+            min="1"
+            max="20"
+            step="0.5"
+            class="v2-input w-full"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">预计采收天数</label>
+          <div class="v2-input w-full bg-gray-50 flex items-center text-gray-500">
+            {{ config.simulationDays }} 天
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 p-4 rounded-lg bg-gray-50 border border-gray-200">
+        <div class="flex items-center gap-2 mb-2">
+          <Sparkles :size="14" class="text-amber-500" />
+          <span class="text-sm font-medium text-gray-700">配置预览</span>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div>
+            <span class="text-gray-500">品种类型</span>
+            <p class="font-medium text-gray-800">{{ config.selectedCultivarFull?.type ?? '-' }}</p>
+          </div>
+          <div>
+            <span class="text-gray-500">最大LAI</span>
+            <p class="font-medium text-gray-800">{{ config.selectedCultivarFull?.cultivarParams.laimax ?? '-' }}</p>
+          </div>
+          <div>
+            <span class="text-gray-500">目标SSC</span>
+            <p class="font-medium text-gray-800">{{ config.selectedCultivarFull?.keyParams.ssc ?? '-' }}°Brix</p>
+          </div>
+          <div>
+            <span class="text-gray-500">区域海拔</span>
+            <p class="font-medium text-gray-800">{{ config.selectedRegionFull?.elevation ?? '-' }}m</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end">
+        <button
+          :disabled="!config.selectedCultivar || !config.selectedRegion || isGenerating"
+          class="v2-btn-primary flex items-center gap-2"
+          @click="generatePlan"
+        >
+          <Loader2 v-if="isGenerating" :size="18" class="animate-spin" />
+          <Sparkles v-else :size="18" />
+          {{ isGenerating ? '生成方案中...' : '生成方案' }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
