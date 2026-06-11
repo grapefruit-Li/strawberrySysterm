@@ -76,15 +76,29 @@ const chartLegends = computed(() => {
   }))
 })
 
-/* 防治方案表格数据 */
-const controlPlans = [
-  { pest: '🐛 蚜虫', period: '9/30~11/2', threshold: '>5头/叶', drug: '吡虫啉·螺虫乙酯' },
-  { pest: '🕷️ 二斑叶螨', period: '12/30~2/22', threshold: '>3头/叶', drug: '丁醚脲·联苯肼酯' },
-  { pest: '🪲 西花蓟马', period: '9/30~11/20', threshold: '>8头/花', drug: '乙基多杀菌素' },
-  { pest: '🦠 灰霉病', period: '11/2~2/22', threshold: '开花期预防', drug: '嘧霉胺·异菌脲' },
-  { pest: '🍄 白粉病', period: '11/2~1/19', threshold: '烧叶预防', drug: '醚菌酯·硫磺' },
-  { pest: '⚫ 炭疽病', period: '9/30~11/2', threshold: '苗期预防', drug: '咪鲜胺·代森锰锌' },
-]
+/* 防治方案表格数据 - 从病虫害风险数据动态生成 */
+const controlPlans = computed(() => {
+  if (!hasData.value) return [
+    { pest: '🐛 蚜虫', period: '—', threshold: '>5头/叶', drug: '吡虫啉·螺虫乙酯' },
+    { pest: '🕷️ 二斑叶螨', period: '—', threshold: '>3头/叶', drug: '丁醚脲·联苯肼酯' },
+    { pest: '🪲 西花蓟马', period: '—', threshold: '>8头/花', drug: '乙基多杀菌素' },
+    { pest: '🦠 灰霉病', period: '—', threshold: '开花期预防', drug: '嘧霉胺·异菌脲' },
+    { pest: '🍄 白粉病', period: '—', threshold: '烧叶预防', drug: '醚菌酯·硫磺' },
+    { pest: '⚫ 炭疽病', period: '—', threshold: '苗期预防', drug: '咪鲜胺·代森锰锌' },
+  ]
+  const pestDrugMap: Record<string, { pest: string; threshold: string; drug: string }> = {
+    '蚜虫': { pest: '🐛 蚜虫', threshold: '>5头/叶', drug: '吡虫啉·螺虫乙酯' },
+    '红蜘蛛': { pest: '🕷️ 红蜘蛛', threshold: '>3头/叶', drug: '丁醚脲·联苯肼酯' },
+    '灰霉病': { pest: '🦠 灰霉病', threshold: '开花期预防', drug: '嘧霉胺·异菌脲' },
+    '白粉病': { pest: '🍄 白粉病', threshold: '烧叶预防', drug: '醚菌酯·硫磺' },
+    '炭疽病': { pest: '⚫ 炭疽病', threshold: '苗期预防', drug: '咪鲜胺·代森锰锌' },
+  }
+  return simStore.pestRisks.map(r => {
+    const info = pestDrugMap[r.name]
+    if (!info) return { pest: `🔬 ${r.name}`, period: r.relatedStage, threshold: '—', drug: '—' }
+    return { pest: info.pest, period: r.relatedStage, threshold: info.threshold, drug: info.drug }
+  })
+})
 
 /* IPM核心原则 */
 const ipmPrinciples = [

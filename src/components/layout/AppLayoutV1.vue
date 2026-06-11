@@ -65,77 +65,67 @@ const currentPageTitle = computed(() => {
 </script>
 
 <template>
-  <div class="h-screen flex bg-midnight-900 overflow-hidden">
+  <div class="v1-layout">
     <!-- 侧边栏 -->
     <aside
-      class="h-full flex flex-col bg-midnight-800/80 backdrop-blur-md border-r border-midnight-600/30 transition-all duration-300 ease-in-out relative"
-      :class="sidebarCollapsed ? 'w-16' : 'w-60'"
+      class="sidebar"
+      :class="{ collapsed: sidebarCollapsed }"
     >
       <!-- 品牌 Logo -->
-      <div class="flex items-center gap-3 px-4 h-16 border-b border-midnight-600/30 shrink-0">
-        <span class="text-2xl shrink-0">🍓</span>
+      <div class="sidebar-header">
+        <div style="font-size: 28px; margin-bottom: 8px">🍓</div>
         <transition name="fade">
-          <span
-            v-if="!sidebarCollapsed"
-            class="font-heading text-lg text-forest-400 whitespace-nowrap overflow-hidden"
-          >
-            StrawSim V1
-          </span>
+          <div v-if="!sidebarCollapsed" class="sidebar-header-text">
+            <div class="sidebar-title">StrawSim V1</div>
+            <div class="sidebar-subtitle">DSSAT CROPGRO 模型</div>
+            <div class="sidebar-badge">模拟器模式</div>
+          </div>
         </transition>
       </div>
 
       <!-- 导航列表 -->
-      <nav class="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
+      <nav class="sidebar-nav">
         <router-link
           v-for="item in navItems"
           :key="item.path"
           :to="item.path"
-          :class="isActive(item.path) ? 'nav-item-active-v1' : 'nav-item'"
+          :class="['nav-item', { active: isActive(item.path) }]"
         >
-          <component :is="item.icon" :size="20" class="shrink-0" />
+          <component :is="item.icon" :size="20" class="nav-icon-lucide" />
           <transition name="fade">
-            <span v-if="!sidebarCollapsed" class="text-sm whitespace-nowrap overflow-hidden">
-              {{ item.label }}
-            </span>
+            <span v-if="!sidebarCollapsed" class="nav-label">{{ item.label }}</span>
           </transition>
         </router-link>
       </nav>
 
       <!-- 折叠按钮 -->
-      <div class="p-2 border-t border-midnight-600/30 shrink-0">
-        <button
-          class="w-full flex items-center justify-center p-2 rounded-lg text-midnight-400 hover:text-midnight-200 hover:bg-midnight-700/40 transition-all duration-200"
-          @click="toggleSidebar"
-        >
+      <div class="sidebar-toggle">
+        <button class="toggle-btn" @click="toggleSidebar">
           <component :is="sidebarCollapsed ? ChevronRight : ChevronLeft" :size="18" />
         </button>
+      </div>
+
+      <!-- 底部版本信息 -->
+      <div class="sidebar-footer">
+        <div style="font-size: 11px; color: var(--text-muted)">v1.0 · DSSAT CROPGRO</div>
       </div>
     </aside>
 
     <!-- 主内容区域 -->
-    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <div class="main-area">
       <!-- 顶部头栏 -->
-      <header class="h-16 flex items-center justify-between px-6 border-b border-midnight-600/30 bg-midnight-800/60 backdrop-blur-md shrink-0">
-        <!-- 左侧标题 -->
-        <div class="flex items-center gap-4">
-          <h1 class="font-heading text-xl text-midnight-50">{{ currentPageTitle }}</h1>
+      <header class="top-bar">
+        <div class="top-bar-left">
+          <span style="font-size: 14px; color: var(--text-secondary)">
+            {{ currentPageTitle }}
+          </span>
         </div>
-
-        <!-- 右侧操作 -->
-        <div class="flex items-center gap-3">
-          <!-- 查看手册 -->
-          <button
-            class="ghost-btn flex items-center gap-1.5 text-sm"
-            @click="showManual = true"
-          >
+        <div class="top-bar-right">
+          <button class="ghost-btn" @click="showManual = true">
             <BookOpen :size="14" />
             <span>使用手册</span>
           </button>
-          <!-- 返回版本选择 -->
-          <button
-            class="ghost-btn flex items-center gap-1.5 text-sm"
-            @click="router.push('/')"
-          >
+          <button class="ghost-btn" @click="router.push('/')">
             <ArrowLeft :size="14" />
             <span>返回版本选择</span>
           </button>
@@ -143,7 +133,7 @@ const currentPageTitle = computed(() => {
       </header>
 
       <!-- 路由视图 -->
-      <main class="flex-1 overflow-y-auto p-6">
+      <main class="content-area">
         <router-view />
       </main>
     </div>
@@ -159,6 +149,159 @@ const currentPageTitle = computed(() => {
 </template>
 
 <style scoped>
+.v1-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+/* 侧边栏 */
+.sidebar {
+  width: 240px;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: width 0.3s ease-in-out;
+}
+
+.sidebar.collapsed {
+  width: 64px;
+}
+
+.sidebar-header {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border-color);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed .sidebar-header {
+  padding: 16px 8px;
+}
+
+.sidebar-header-text {
+  text-align: center;
+}
+
+.sidebar-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.sidebar-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.sidebar-badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 10px;
+  background: var(--highlight-bg);
+  color: var(--accent-blue);
+  font-weight: 500;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 0;
+  overflow-y: auto;
+}
+
+.nav-icon-lucide {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.nav-label {
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar-toggle {
+  padding: 8px;
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.toggle-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 8px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed .sidebar-footer {
+  display: none;
+}
+
+/* 主内容区域 */
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.top-bar {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.top-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.content-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px;
+  background: var(--bg-primary);
+}
+
+/* 过渡动画 */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;
@@ -166,12 +309,5 @@ const currentPageTitle = computed(() => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-}
-
-/* V1 激活导航项 - 使用 forest 绿色 */
-.nav-item-active-v1 {
-  @apply flex items-center gap-3 px-4 py-3 rounded-lg
-         text-forest-400 bg-forest-500/10
-         border-l-2 border-forest-500 cursor-pointer;
 }
 </style>

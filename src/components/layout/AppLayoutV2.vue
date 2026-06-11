@@ -1,11 +1,35 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ManualDrawer from '@/components/ManualDrawer.vue'
 
 const route = useRoute()
 const router = useRouter()
 const showManual = ref(false)
+
+/* 侧边栏折叠状态 */
+const sidebarCollapsed = ref(false)
+
+/* 响应式：小屏幕自动折叠 */
+function handleResize() {
+  if (window.innerWidth < 768) {
+    sidebarCollapsed.value = true
+  }
+}
+
+onMounted(() => {
+  handleResize()
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+})
+
+/* 切换侧边栏 */
+function toggleSidebar() {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+}
 
 /* 导航项配置 */
 const navItems = [
@@ -30,13 +54,20 @@ function goBack() {
 <template>
   <div class="v2-layout">
     <!-- 侧边栏 -->
-    <aside class="sidebar">
+    <aside
+      class="sidebar"
+      :class="{ collapsed: sidebarCollapsed }"
+    >
       <!-- 头部 -->
       <div class="sidebar-header">
         <div style="font-size: 28px; margin-bottom: 8px">🍓</div>
-        <div class="sidebar-title">草莓 Strawberry</div>
-        <div class="sidebar-subtitle">DSSAT CROPGRO 模型</div>
-        <div class="sidebar-badge">决策支持系统</div>
+        <transition name="fade">
+          <div v-if="!sidebarCollapsed" class="sidebar-header-text">
+            <div class="sidebar-title">草莓 Strawberry</div>
+            <div class="sidebar-subtitle">DSSAT CROPGRO 模型</div>
+            <div class="sidebar-badge">决策支持系统</div>
+          </div>
+        </transition>
       </div>
 
       <!-- 导航列表 -->
@@ -48,9 +79,18 @@ function goBack() {
           :class="['nav-item', { active: isActive(item.path) }]"
         >
           <span class="nav-icon">{{ item.icon }}</span>
-          <span>{{ item.label }}</span>
+          <transition name="fade">
+            <span v-if="!sidebarCollapsed">{{ item.label }}</span>
+          </transition>
         </router-link>
       </nav>
+
+      <!-- 折叠按钮 -->
+      <div class="sidebar-toggle">
+        <button class="toggle-btn" @click="toggleSidebar">
+          {{ sidebarCollapsed ? '→' : '←' }}
+        </button>
+      </div>
 
       <!-- 底部 -->
       <div class="sidebar-footer">
@@ -108,11 +148,25 @@ function goBack() {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  transition: width 0.3s ease-in-out;
+}
+
+.sidebar.collapsed {
+  width: 64px;
 }
 
 .sidebar-header {
   padding: 24px 20px 20px;
   border-bottom: 1px solid var(--border-color);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed .sidebar-header {
+  padding: 16px 8px;
+}
+
+.sidebar-header-text {
   text-align: center;
 }
 
@@ -150,10 +204,41 @@ function goBack() {
   flex-shrink: 0;
 }
 
+.sidebar-toggle {
+  padding: 8px;
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.toggle-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 8px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
 .sidebar-footer {
   padding: 16px 20px;
   border-top: 1px solid var(--border-color);
   text-align: center;
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed .sidebar-footer {
+  display: none;
 }
 
 /* 主内容区域 */
@@ -193,5 +278,15 @@ function goBack() {
   overflow-y: auto;
   padding: 24px 32px;
   background: var(--bg-primary);
+}
+
+/* 过渡动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

@@ -21,8 +21,27 @@ const hasConfigNoResult = computed(() => {
   return configStore.selectedCultivarFull && configStore.selectedRegion && !hasData.value
 })
 
-/* 月份标签 */
-const months = ['9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月']
+/* 月份标签 - 从模拟数据动态生成 */
+const months = computed(() => {
+  if (!hasData.value) return ['9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月']
+  const events = simStore.phenologyEvents
+  if (events.length === 0) return ['9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月']
+  const startDate = events[0].startDate
+  const endDate = events[events.length - 1].endDate
+  const startMonth = Math.floor((startDate % 10000) / 100)
+  const startYear = Math.floor(startDate / 10000)
+  const endMonth = Math.floor((endDate % 10000) / 100)
+  const endYear = Math.floor(endDate / 10000)
+  const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
+  const result: string[] = []
+  let y = startYear, m = startMonth
+  while (y < endYear || (y === endYear && m <= endMonth)) {
+    result.push(monthNames[m - 1])
+    m++
+    if (m > 12) { m = 1; y++ }
+  }
+  return result.length > 0 ? result : ['9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月']
+})
 
 /* 定植日期显示 */
 const plantingDateDisplay = computed(() => {
@@ -75,6 +94,16 @@ const timelineNodes = computed(() => {
   }))
 })
 
+/* 根据纬度和月份估算日长 */
+function estimateDayLength(month: number, lat: number = configStore.stationLat || 30): number {
+  const declination = 23.45 * Math.sin((2 * Math.PI / 12) * (month - 3))
+  const latRad = lat * Math.PI / 180
+  const decRad = declination * Math.PI / 180
+  const cosHA = -Math.tan(latRad) * Math.tan(decRad)
+  const HA = Math.acos(Math.max(-1, Math.min(1, cosHA)))
+  return Math.round((2 * HA * 12 / Math.PI) * 10) / 10
+}
+
 /* 各物候阶段参数表格数据 - 从物候事件和模拟结果派生 */
 const phenologyParams = computed(() => {
   if (!hasData.value) return []
@@ -90,10 +119,7 @@ const phenologyParams = computed(() => {
       : '—'
     // 日长估算（简化：根据月份估算）
     const startMonth = Math.floor((e.startDate % 10000) / 100)
-    const dayLengthMap: Record<number, number> = {
-      9: 12.2, 10: 11.4, 11: 10.8, 12: 10.4, 1: 10.5, 2: 11.0, 3: 11.8, 4: 12.8, 5: 13.5
-    }
-    const dayLength = dayLengthMap[startMonth] ?? '—'
+    const dayLength = estimateDayLength(startMonth)
 
     const emojiMap: Record<string, string> = {
       '萌芽期': '🌱', '营养生长期': '🌱', '花芽分化期': '🌸',

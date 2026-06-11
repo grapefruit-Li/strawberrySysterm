@@ -22,16 +22,50 @@ const hasConfigNoResult = computed(() => {
 /* 是否有模拟数据 */
 const hasData = computed(() => simStore.farmOperations.length > 0)
 
-/* 参数卡片数据 */
-const paramCards = [
-  { icon: '💧', label: '灌溉方式', value: '膜下滴灌', note: '省肥·节水·高效' },
-  { icon: '🧪', label: '建议施N量', value: '150-200 kg N/ha', note: '分6-12次施用' },
-  { icon: '🎬', label: '覆膜', value: '黑膜', note: '提温+控草+降湿' },
-  { icon: '🌱', label: '密度', value: '4.3 株/m²', note: '行距30cm 株距12cm' },
-]
+/* 参数卡片数据 - 从配置动态生成 */
+const paramCards = computed(() => {
+  const irrigationLabels: Record<string, string> = {
+    'drip-mulch': '膜下滴灌', 'sprinkler': '喷灌', 'flood': '漫灌', 'rainfed': '雨养',
+  }
+  const fertilityLabels: Record<string, string> = {
+    'low': '低肥力·有机质<1%', 'medium': '中肥力·有机质1-2%', 'high': '高肥力·有机质>2%',
+  }
+  return [
+    { icon: '💧', label: '灌溉方式', value: irrigationLabels[configStore.irrigationMode] || '膜下滴灌', note: '省肥·节水·高效' },
+    { icon: '🧪', label: '建议施N量', value: configStore.soilFertility === 'high' ? '120-150' : configStore.soilFertility === 'low' ? '180-220' : '150-200', note: 'kg N/ha·分次施用' },
+    { icon: '🎬', label: '覆膜', value: configStore.cultivationMode === 'open-field' ? '黑膜' : configStore.cultivationMode === 'greenhouse' ? '银黑双面膜' : '黑膜', note: '提温+控草+降湿' },
+    { icon: '🌱', label: '密度', value: `${(configStore.plantingDensity / 1000).toFixed(1)} 株/m²`, note: '行距30cm 株距12cm' },
+  ]
+})
 
-/* 月份标签 */
-const months = ['9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月']
+/* 月份标签 - 从模拟数据动态生成 */
+const months = computed(() => {
+  if (!hasData.value) return ['9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月']
+  const ops = simStore.farmOperations
+  if (ops.length === 0) return ['9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月']
+  // Get date range from operations
+  const dates = ops.map(op => {
+    const d = op.plannedDate
+    if (typeof d === 'string') return parseInt(d.replace(/-/g, ''))
+    return d
+  }).filter(d => d > 0)
+  if (dates.length === 0) return ['9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月']
+  const minDate = Math.min(...dates)
+  const maxDate = Math.max(...dates)
+  const startMonth = Math.floor((minDate % 10000) / 100)
+  const startYear = Math.floor(minDate / 10000)
+  const endMonth = Math.floor((maxDate % 10000) / 100)
+  const endYear = Math.floor(maxDate / 10000)
+  const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
+  const result: string[] = []
+  let y = startYear, m = startMonth
+  while (y < endYear || (y === endYear && m <= endMonth)) {
+    result.push(monthNames[m - 1])
+    m++
+    if (m > 12) { m = 1; y++ }
+  }
+  return result.length > 0 ? result : ['9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月']
+})
 
 /* 操作类型对应的颜色类 */
 function stageClassFromType(type: OperationType): string {
@@ -80,15 +114,70 @@ const operationsByStage = computed(() => {
   return Object.entries(groups).map(([stage, ops]) => ({ stage, ops }))
 })
 
-/* 灌溉施肥方案表格数据 */
-const irrigationFertilizerPlans = [
-  { month: '9月', stage: '定植-缓苗', irrigation: '5-8mm', frequency: '1次/天', npk: '20-20-20', amount: '5kg×2' },
-  { month: '9月', stage: '营养生长', irrigation: '5-8mm', frequency: '1次/天', npk: '20-20-20', amount: '5kg×2' },
-  { month: '10月', stage: '花芽分化-开花', irrigation: '4-6mm', frequency: '1次/天', npk: '10-30-20', amount: '8kg×2' },
-  { month: '11月', stage: '第一茬果', irrigation: '6-8mm', frequency: '1-2次/天', npk: '15-15-30', amount: '8kg×3' },
-  { month: '12月', stage: '采收高峰', irrigation: '6-10mm', frequency: '2次/天', npk: '16-8-32+Ca', amount: '8kg×4' },
-  { month: '1月', stage: '采收后期', irrigation: '6-8mm', frequency: '1-2次/天', npk: '16-8-32+B', amount: '8kg×2' },
-]
+/* 灌溉施肥方案表格数据 - 从模拟数据动态生成 */
+const irrigationFertilizerPlans = computed(() => {
+  if (!hasData.value) return []
+  // Generate from farm operations grouped by month
+  const monthStageMap: Record<string, string> = {}
+  const monthIrrigation: Record<string, string[]> = {}
+  const monthFertilizer: Record<string, string[]> = {}
+  for (const op of simStore.farmOperations) {
+    const d = typeof op.plannedDate === 'string' ? parseInt(op.plannedDate.replace(/-/g, '')) : op.plannedDate
+    const month = Math.floor((d % 10000) / 100)
+    const monthKey = `${month}月`
+    if (!monthStageMap[monthKey]) monthStageMap[monthKey] = op.relatedStage
+    if (op.type === 'irrigation') {
+      if (!monthIrrigation[monthKey]) monthIrrigation[monthKey] = []
+      monthIrrigation[monthKey].push(op.description)
+    }
+    if (op.type === 'fertilizer') {
+      if (!monthFertilizer[monthKey]) monthFertilizer[monthKey] = []
+      monthFertilizer[monthKey].push(op.description)
+    }
+  }
+  const npkMap: Record<string, string> = {
+    '萌芽期': '20-20-20', '营养生长期': '20-20-20', '花芽分化期': '10-30-20',
+    '开花期': '10-30-20', '结果期': '15-15-30', '果实膨大期': '15-15-30',
+    '采收期': '16-8-32+Ca', '成熟期': '16-8-32+B',
+  }
+  return Object.entries(monthStageMap).map(([month, stage]) => ({
+    month,
+    stage,
+    irrigation: monthIrrigation[month]?.[0] || '5-8mm',
+    frequency: '1-2次/天',
+    npk: npkMap[stage] || '15-15-30',
+    amount: monthFertilizer[month]?.[0] || '8kg×2',
+  }))
+})
+
+/* 农事操作时间线段 - 从模拟数据动态生成 */
+const opsTimelineSegments = computed(() => {
+  if (!hasData.value) return [
+    { name: '整地', width: 15, colorClass: 'green' },
+    { name: '营养管理', width: 20, colorClass: 'light-green' },
+    { name: '促花', width: 15, colorClass: 'yellow' },
+    { name: '第一茬', width: 20, colorClass: 'orange' },
+    { name: '高峰', width: 20, colorClass: 'red' },
+    { name: '拉秧', width: 10, colorClass: 'brown' },
+  ]
+  // Group operations by stage and calculate widths
+  const stageGroups: Record<string, number> = {}
+  for (const op of simStore.farmOperations) {
+    if (!stageGroups[op.relatedStage]) stageGroups[op.relatedStage] = 0
+    stageGroups[op.relatedStage]++
+  }
+  const total = Object.values(stageGroups).reduce((s, c) => s + c, 0) || 1
+  const stageColorMap: Record<string, string> = {
+    '萌芽期': 'green', '营养生长期': 'light-green', '花芽分化期': 'yellow',
+    '开花期': 'yellow', '结果期': 'orange', '果实膨大期': 'orange',
+    '采收期': 'red', '成熟期': 'red',
+  }
+  return Object.entries(stageGroups).map(([stage, count]) => ({
+    name: stage,
+    width: Math.max(8, Math.round((count / total) * 100)),
+    colorClass: stageColorMap[stage] || 'green',
+  }))
+})
 </script>
 
 <template>
@@ -140,12 +229,13 @@ const irrigationFertilizerPlans = [
       <h3 class="section-title">农事操作时间线</h3>
       <div class="ops-timeline">
         <div class="ops-timeline-bar">
-          <div class="ops-segment green" style="width: 15%">整地</div>
-          <div class="ops-segment light-green" style="width: 20%">营养管理</div>
-          <div class="ops-segment yellow" style="width: 15%">促花</div>
-          <div class="ops-segment orange" style="width: 20%">第一茬</div>
-          <div class="ops-segment red" style="width: 20%">高峰</div>
-          <div class="ops-segment brown" style="width: 10%">拉秧</div>
+          <div
+            v-for="(seg, idx) in opsTimelineSegments"
+            :key="idx"
+            class="ops-segment"
+            :class="seg.colorClass"
+            :style="{ width: seg.width + '%' }"
+          >{{ seg.name }}</div>
         </div>
         <div class="ops-timeline-months">
           <span v-for="month in months" :key="month">{{ month }}</span>
