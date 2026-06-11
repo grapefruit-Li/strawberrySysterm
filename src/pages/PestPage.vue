@@ -2,13 +2,25 @@
 import { computed } from 'vue'
 import { useSimulationStore } from '@/stores/simulation'
 import { useConfigStore } from '@/stores/config'
+import { useSimulation } from '@/composables/useSimulation'
 import { useChart } from '@/composables/useChart'
 import VChart from 'vue-echarts'
 import type { RiskLevel } from '@/engine/types'
 
 const simStore = useSimulationStore()
 const configStore = useConfigStore()
+const { runChainSimulation, isRunning } = useSimulation()
 const { riskIndexOption } = useChart()
+
+/* 重新计算 */
+function handleRecalculate() {
+  runChainSimulation()
+}
+
+/* 是否有配置但无结果 */
+const hasConfigNoResult = computed(() => {
+  return configStore.selectedCultivarFull && configStore.selectedRegion && !hasData.value
+})
 
 /* 是否有模拟数据 */
 const hasData = computed(() => simStore.pestRisks.length > 0)
@@ -86,12 +98,27 @@ const ipmPrinciples = [
 <template>
   <div class="pest-page">
     <div class="page-header">
-      <h2 class="page-title">植保 IPM</h2>
+      <div class="page-header-row">
+        <h2 class="page-title">植保 IPM</h2>
+        <button
+          class="recalc-btn"
+          :disabled="isRunning"
+          @click="handleRecalculate"
+        >
+          <span v-if="isRunning" class="recalc-spinner"></span>
+          {{ isRunning ? '计算中...' : '重新计算' }}
+        </button>
+      </div>
       <p class="page-subtitle">基于物候期的综合病虫害防治方案</p>
     </div>
 
+    <!-- 有配置但无结果提示 -->
+    <div v-if="hasConfigNoResult" class="timeline-section">
+      <p style="text-align:center;color:var(--text-muted);padding:20px 0;">💡 已选择品种和地区，点击「重新计算」生成年度种植方案</p>
+    </div>
+
     <!-- 无数据提示 -->
-    <div v-if="!hasData" class="timeline-section">
+    <div v-else-if="!hasData" class="timeline-section">
       <p style="text-align:center;color:var(--text-muted);padding:20px 0;">💡 尚无模拟数据，请先在基础信息页生成年度种植方案</p>
     </div>
 
@@ -123,7 +150,7 @@ const ipmPrinciples = [
         </div>
       </div>
       <div class="chart-container" style="height: 300px">
-        <VChart :option="riskIndexOption()" class="echarts-container" style="height: 300px" />
+        <VChart :option="riskIndexOption(simStore.pestRisks)" class="echarts-container" style="height: 300px" />
       </div>
     </div>
     </template>
@@ -180,6 +207,51 @@ const ipmPrinciples = [
 
 .page-header {
   margin-bottom: 24px;
+}
+
+.page-header-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.recalc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.recalc-btn:hover:not(:disabled) {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+.recalc-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.recalc-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--text-muted);
+  border-top-color: var(--accent-blue);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* 4个风险卡片 flex一行 */

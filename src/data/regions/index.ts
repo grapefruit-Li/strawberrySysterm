@@ -64,12 +64,42 @@ export const kunmingRegion: RegionConfig = {
   climateType: 'subtropical-highland',
 }
 
+/** 北京 - 暖温带季风气候 */
+export const beijingRegion: RegionConfig = {
+  id: 'CN-BEIJING',
+  name: '北京 Beijing',
+  country: '中国',
+  lat: 39.9,
+  lon: 116.4,
+  elevation: 50,
+  avgTemp: 13.0,
+  annualRain: 550,
+  growingSeason: '9月-5月',
+  climateType: 'warm-temperate-monsoon',
+}
+
+/** 南京 - 亚热带季风气候 */
+export const nanjingRegion: RegionConfig = {
+  id: 'CN-NANJING',
+  name: '南京 Nanjing',
+  country: '中国',
+  lat: 32.06,
+  lon: 118.8,
+  elevation: 20,
+  avgTemp: 15.7,
+  annualRain: 1050,
+  growingSeason: '9月-5月',
+  climateType: 'subtropical-monsoon',
+}
+
 /** 所有内置区域配置 */
 export const builtInRegions: RegionConfig[] = [
   floridaBalmRegion,
   californiaSalinasRegion,
   shanghaiRegion,
   kunmingRegion,
+  beijingRegion,
+  nanjingRegion,
 ]
 
 /** 别名导出，兼容旧引用 */
@@ -232,6 +262,7 @@ function getTempAmplitude(climateType: string): number {
     case 'mediterranean': return 6.5
     case 'subtropical-monsoon': return 12.5
     case 'subtropical-highland': return 5.0
+    case 'warm-temperate-monsoon': return 15.0
     default: return 10.0
   }
 }
@@ -277,6 +308,12 @@ function getRainParams(climateType: string): RainParams {
         monthlyFactor: [0.3, 0.3, 0.4, 0.6, 1.4, 1.6, 1.6, 1.5, 1.3, 1.2, 0.5, 0.3],
         meanRainAmount: 9,
       }
+    case 'warm-temperate-monsoon':
+      return {
+        annualRainDays: 75,
+        monthlyFactor: [0.4, 0.5, 0.8, 0.9, 1.1, 1.6, 1.8, 1.6, 1.0, 0.7, 0.5, 0.3],
+        meanRainAmount: 8,
+      }
     default:
       return {
         annualRainDays: 80,
@@ -313,6 +350,8 @@ function getDiurnalRange(climateType: string, dayOfYear: number): number {
       return 9 + variation
     case 'subtropical-highland':
       return 13 + variation
+    case 'warm-temperate-monsoon':
+      return 11 + variation
     default:
       return 10 + variation
   }
@@ -358,6 +397,9 @@ function estimateRelativeHumidity(
       break
     case 'subtropical-highland':
       baseHumidity = 68
+      break
+    case 'warm-temperate-monsoon':
+      baseHumidity = 60
       break
     default:
       baseHumidity = 70

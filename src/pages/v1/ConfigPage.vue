@@ -14,6 +14,8 @@ import {
   Trash2,
   Upload,
   Play,
+  Pencil,
+  RotateCcw,
 } from 'lucide-vue-next'
 
 const config = useConfigStore()
@@ -29,6 +31,16 @@ const selectedCultivarCode = ref(config.selectedCultivar || '')
 
 /* 区域下拉选中值（id） */
 const selectedRegionId = ref(config.selectedRegion?.id || '')
+
+/* 品种参数编辑模式 */
+const editingParams = ref(false)
+
+/* 恢复默认品种参数 */
+function resetCultivarParams() {
+  if (config.selectedCultivarFull) {
+    config.setCultivarFull(config.selectedCultivarFull)
+  }
+}
 
 /* 种植密度本地值（株/m²），与 store 的 株/ha 换算 */
 const plantingDensityLocal = computed({
@@ -306,35 +318,108 @@ function startSimulation() {
 
       <!-- 品种参数详情 -->
       <div v-if="config.selectedCultivarFull" class="glass-card p-5">
-        <h3 class="text-sm font-semibold text-midnight-200 mb-4">品种参数 (DSSAT CROPGRO)</h3>
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-midnight-200">品种参数 (DSSAT CROPGRO)</h3>
+          <div class="flex items-center gap-2">
+            <button
+              class="ghost-btn flex items-center gap-1.5 text-sm"
+              :class="editingParams ? 'text-strawberry-400 border-strawberry-500/30' : ''"
+              @click="editingParams = !editingParams"
+            >
+              <Pencil :size="14" />
+              {{ editingParams ? '退出编辑' : '编辑参数' }}
+            </button>
+            <button
+              v-if="editingParams"
+              class="ghost-btn flex items-center gap-1.5 text-sm"
+              @click="resetCultivarParams"
+            >
+              <RotateCcw :size="14" />
+              恢复默认
+            </button>
+          </div>
+        </div>
+
+        <!-- 编辑模式警告 -->
+        <div v-if="editingParams" class="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+          <p class="text-xs text-amber-400">
+            ⚠️ 修改品种参数将影响模拟结果的准确性。建议仅在了解 DSSAT 模型参数含义的情况下进行修改。
+          </p>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="text-xs text-midnight-400 mb-1 block">出苗天数</label>
-            <input :value="config.cultivarParams.emergenceDays" type="number" class="input-field" readonly />
+            <input
+              v-model.number="config.cultivarParams.emergenceDays"
+              type="number"
+              class="input-field"
+              :readonly="!editingParams"
+              :class="editingParams ? '' : 'opacity-70'"
+            />
           </div>
           <div>
             <label class="text-xs text-midnight-400 mb-1 block">开花天数</label>
-            <input :value="config.cultivarParams.floweringDays" type="number" class="input-field" readonly />
+            <input
+              v-model.number="config.cultivarParams.floweringDays"
+              type="number"
+              class="input-field"
+              :readonly="!editingParams"
+              :class="editingParams ? '' : 'opacity-70'"
+            />
           </div>
           <div>
             <label class="text-xs text-midnight-400 mb-1 block">成熟天数</label>
-            <input :value="config.cultivarParams.maturityDays" type="number" class="input-field" readonly />
+            <input
+              v-model.number="config.cultivarParams.maturityDays"
+              type="number"
+              class="input-field"
+              :readonly="!editingParams"
+              :class="editingParams ? '' : 'opacity-70'"
+            />
           </div>
           <div>
             <label class="text-xs text-midnight-400 mb-1 block">最大LAI</label>
-            <input :value="config.cultivarParams.maxLai" type="number" step="0.1" class="input-field" readonly />
+            <input
+              v-model.number="config.cultivarParams.maxLai"
+              type="number"
+              step="0.1"
+              class="input-field"
+              :readonly="!editingParams"
+              :class="editingParams ? '' : 'opacity-70'"
+            />
           </div>
           <div>
             <label class="text-xs text-midnight-400 mb-1 block">潜在果重 (g)</label>
-            <input :value="config.cultivarParams.potentialFruitWeight" type="number" class="input-field" readonly />
+            <input
+              v-model.number="config.cultivarParams.potentialFruitWeight"
+              type="number"
+              class="input-field"
+              :readonly="!editingParams"
+              :class="editingParams ? '' : 'opacity-70'"
+            />
           </div>
           <div>
             <label class="text-xs text-midnight-400 mb-1 block">目标可溶性固形物 (%)</label>
-            <input :value="config.cultivarParams.sscTarget" type="number" step="0.1" class="input-field" readonly />
+            <input
+              v-model.number="config.cultivarParams.sscTarget"
+              type="number"
+              step="0.1"
+              class="input-field"
+              :readonly="!editingParams"
+              :class="editingParams ? '' : 'opacity-70'"
+            />
           </div>
           <div>
             <label class="text-xs text-midnight-400 mb-1 block">目标酸度 (%)</label>
-            <input :value="config.cultivarParams.acidityTarget" type="number" step="0.1" class="input-field" readonly />
+            <input
+              v-model.number="config.cultivarParams.acidityTarget"
+              type="number"
+              step="0.1"
+              class="input-field"
+              :readonly="!editingParams"
+              :class="editingParams ? '' : 'opacity-70'"
+            />
           </div>
         </div>
       </div>

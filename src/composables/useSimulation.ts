@@ -5,10 +5,14 @@
 import { ref, computed } from 'vue'
 import { useSimulationStore } from '@/stores/simulation'
 import { useConfigStore } from '@/stores/config'
+import { createSimulationRunner } from '@/engine/runner'
+import { strawberrySpecies } from '@/data/species/strawberry'
+import { generateWeather } from '@/data/regions/index'
 import {
   GrowthStage,
 } from '@/engine/types'
 import type {
+  SimulationConfig,
   SimulationResult,
   SimulationSummary,
   DailyOutput,
@@ -22,6 +26,10 @@ import type {
   RiskLevel,
   OperationType,
   OperationPriority,
+  WeatherStation,
+  SoilProfile,
+  SoilLayer as EngineSoilLayer,
+  ManagementEvent,
 } from '@/engine/types'
 
 /** 模拟运行器返回类型 */
@@ -73,6 +81,222 @@ export function useSimulation() {
     const s = numToDate(start)
     const e = numToDate(end)
     return Math.floor((e.getTime() - s.getTime()) / 86400000)
+  }
+
+  /**
+   * 日期加天数，返回YYYYMMDD数字
+   */
+  function addDays(dateNum: number, days: number): number {
+    const d = numToDate(dateNum)
+    const result = new Date(d.getTime() + days * 86400000)
+    return result.getFullYear() * 10000 + (result.getMonth() + 1) * 100 + result.getDate()
+  }
+
+  /**
+   * 从configStore数据构建完整的SimulationConfig
+   */
+  function buildSimulationConfig(): SimulationConfig {
+    const startNum = dateStrToNum(configStore.plantingDate)
+    const endNum = addDays(startNum, 180)
+
+    // 生成气象数据
+    const region = configStore.selectedRegion ?? {
+      id: 'DEFAULT',
+      name: configStore.stationName,
+      country: '中国',
+      lat: configStore.stationLat,
+      lon: configStore.stationLon,
+      elevation: configStore.stationElev,
+      avgTemp: 16,
+      annualRain: 1000,
+      growingSeason: '3月-8月',
+      climateType: 'subtropical-monsoon',
+    }
+    const weatherDays = generateWeather(region, startNum, 200)
+
+    const weather: WeatherStation = {
+      stationId: region.id,
+      name: region.name,
+      lat: region.lat,
+      lon: region.lon,
+      elev: region.elevation,
+      tav: region.avgTemp,
+      amp: 12,
+      refht: 2,
+      wndht: 10,
+      days: weatherDays,
+    }
+
+    // 构建土壤剖面 - 从configStore简单格式转换为DSSAT SoilLayer格式
+    const engineLayers: EngineSoilLayer[] = configStore.soilLayers.map((sl, i) => {
+      const slll = Math.max(0.05, sl.awc * 0.3)   // 萎蔫点 ≈ 30% AWC
+      const sldul = sl.awc + slll                    // 田间持水量 = AWC + 萎蔫点
+      const slsat = sldul + 0.1 + (sl.clay / 100) * 0.05  // 饱和含水量 ≈ DUL + 0.1 + 粘粒修正
+      const prevDepth = i > 0 ? configStore.soilLayers[i - 1].depth : 0
+      const sldm = sl.depth - prevDepth               // 层厚度
+
+      return {
+        layerNum: i + 1,
+        sldm,
+        slll: Math.round(slll * 1000) / 1000,
+        sldul: Math.round(sldul * 1000) / 1000,
+        slsat: Math.round(slsat * 1000) / 1000,
+        slrgf: Math.max(0.01, 1 - i * 0.3),
+        slks: Math.max(0.01, 10 * (sl.sand / 100) / (sl.clay / 100 + 0.01)),
+        slbdm: sl.bulkDensity,
+        sloc: sl.om * 0.58,
+        slph: sl.ph,
+        slcl: sl.clay,
+        slsi: 100 - sl.sand - sl.clay,
+        slcf: Math.max(0, sl.sand - 50),
+        slnh4: 2 + sl.om * 0.5,
+        slno3: 5 + sl.om * 1.0,
+      }
+    })
+
+    const soil: SoilProfile = {
+      soilId: 'SOIL-001',
+      name: configStore.soilName,
+      albedo: 0.13,
+      u: 6,
+      cn2: 72,
+      slnf: 0.8,
+      slpf: 0.9,
+      layers: engineLayers,
+    }
+
+    // 品种和生态型参数
+    const cultivar = configStore.selectedCultivarFull?.cultivarParams ?? {
+      culCode: 'DFLT',
+      name: configStore.cultivarName,
+      ecoCode: 'DFLT',
+      cropCode: 'SWBRRY',
+      p1v: 320,
+      p1r: 300,
+      p3: 230,
+      p4: 320,
+      laimax: 4.5,
+      sla: 350,
+      photosynmax: 1.2,
+      hi: 0.50,
+      fruitdm: 0.095,
+      nfruit: 0.008,
+      flrinterval: 80,
+      maxfruitpertruss: 5,
+    }
+
+    const ecotype = configStore.selectedCultivarFull?.ecotypeParams ?? {
+      ecoCode: 'DFLT',
+      name: '默认',
+      tbase: 5,
+      topt: 22,
+      tmax: 35,
+      cphot: 12,
+      ppfpe: 0.003,
+      laimax: 4.5,
+      sla: 350,
+      photosynmax: 1.2,
+      rm25leaf: 0.030,
+      rm25stem: 0.015,
+      rm25root: 0.010,
+      rm25fruit: 0.020,
+      rg: 0.15,
+      partleaf: 0.35,
+      partstem: 0.25,
+      partroot: 0.15,
+      partfruit: 0.25,
+      pltdensity: configStore.plantingDensity / 10000,
+      rowspc: 30,
+      rtdepinit: 2,
+      rtdepmax: 60,
+    }
+
+    // 管理事件
+    const management: ManagementEvent[] = []
+
+    // 种植事件
+    management.push({
+      eventType: 'planting',
+      date: startNum,
+      amount: 0,
+      details: {
+        seedWeight: 5,
+        density: String(configStore.plantingDensity),
+      },
+    })
+
+    // 灌溉事件
+    for (const ir of configStore.irrigationEvents) {
+      management.push({
+        eventType: 'irrigation',
+        date: dateStrToNum(ir.date),
+        amount: ir.amount,
+        details: { method: ir.method },
+      })
+    }
+
+    // 施肥事件
+    for (const fe of configStore.fertilizerEvents) {
+      management.push({
+        eventType: 'fertilizer',
+        date: dateStrToNum(fe.date),
+        amount: fe.amount * fe.nPct / 100,
+        details: {
+          type: fe.type,
+          npk: `${fe.nPct}-${fe.pPct}-${fe.kPct}`,
+        },
+      })
+    }
+
+    return {
+      weather,
+      soil,
+      cultivar,
+      ecotype,
+      species: strawberrySpecies,
+      management,
+      startDate: startNum,
+      endDate: endNum,
+    }
+  }
+
+  /**
+   * 将引擎的DailyOutput转换为store的DailyResult格式
+   */
+  function convertDailyOutputToResult(o: DailyOutput): {
+    day: number
+    date: string
+    growthStage: string
+    lai: number
+    totalBiomass: number
+    leafWeight: number
+    stemWeight: number
+    rootWeight: number
+    fruitWeight: number
+    waterStress: number
+    nitrogenStress: number
+    srad: number
+    tmax: number
+    tmin: number
+    rain: number
+  } {
+    return {
+      day: o.das,
+      date: formatDateNum(o.day),
+      growthStage: stageName(o.stage),
+      lai: o.lai,
+      totalBiomass: o.biomass,
+      leafWeight: o.leafWt,
+      stemWeight: o.stemWt,
+      rootWeight: o.rootWt,
+      fruitWeight: o.fruitWt,
+      waterStress: o.swfac,
+      nitrogenStress: o.nstres,
+      srad: o.srad,
+      tmax: o.tmax,
+      tmin: o.tmin,
+      rain: o.rain,
+    }
   }
 
   /**
@@ -681,56 +905,24 @@ export function useSimulation() {
   // ==================== 公共方法 ====================
 
   /**
-   * 运行完整模拟
+   * 运行完整模拟 - 使用DSSAT CROPGRO完整引擎
    */
   function runFullSimulation(): SimulationResult {
-    const totalDays = simStore.totalDays
     simStore.startSimulation()
 
-    const allOutputs: DailyOutput[] = []
-    const allHarvests: HarvestRecord[] = []
-    let prev: { plant: PlantState; soil: SoilState } | null = null
+    const config = buildSimulationConfig()
+    const runner = createSimulationRunner(config)
+    const result = runner.run()
 
-    for (let i = 0; i < totalDays; i++) {
-      const result = runEngineStep(i, prev)
-      prev = { plant: result.plant, soil: result.soil }
-      allOutputs.push(result.output)
-      if (result.harvest) {
-        allHarvests.push(result.harvest)
-      }
-    }
+    // 将引擎结果转换为store格式
+    simStore.results = result.dailyOutputs.map(convertDailyOutputToResult)
 
-    const simResult: SimulationResult = {
-      config: {} as any,
-      dailyOutputs: allOutputs,
-      harvests: allHarvests,
-      summary: buildSummary(allOutputs, allHarvests),
-    }
-
-    // 将结果同步到store的results数组
-    simStore.results = allOutputs.map(o => ({
-      day: o.das,
-      date: formatDateNum(o.day),
-      growthStage: stageName(o.stage),
-      lai: o.lai,
-      totalBiomass: o.biomass,
-      leafWeight: o.leafWt,
-      stemWeight: o.stemWt,
-      rootWeight: o.rootWt,
-      fruitWeight: o.fruitWt,
-      waterStress: o.swfac,
-      nitrogenStress: o.nstres,
-      srad: o.srad,
-      tmax: o.tmax,
-      tmin: o.tmin,
-      rain: o.rain,
-    }))
-
+    const totalDays = result.dailyOutputs.length
     simStore.currentDay = totalDays
     simStore.status = 'complete'
     simStore.addEvent('success', '模拟完成！共 ' + totalDays + ' 天')
 
-    return simResult
+    return result
   }
 
   /** 生长阶段枚举转中文名 */
@@ -755,55 +947,28 @@ export function useSimulation() {
   }
 
   /**
-   * 运行链式模拟 - 生成所有关联结果
+   * 运行链式模拟 - 使用DSSAT CROPGRO完整引擎，生成所有关联结果
    */
   function runChainSimulation(): ChainSimulationResult {
-    const totalDays = simStore.totalDays
     simStore.startSimulation()
 
-    const allOutputs: DailyOutput[] = []
-    const allHarvests: HarvestRecord[] = []
-    let prev: { plant: PlantState; soil: SoilState } | null = null
-
-    for (let i = 0; i < totalDays; i++) {
-      const result = runEngineStep(i, prev)
-      prev = { plant: result.plant, soil: result.soil }
-      allOutputs.push(result.output)
-      if (result.harvest) {
-        allHarvests.push(result.harvest)
-      }
-    }
-
-    const summary = buildSummary(allOutputs, allHarvests)
+    const config = buildSimulationConfig()
+    const runner = createSimulationRunner(config)
+    const result = runner.run()
 
     /* 生成物候事件 */
-    const phenologyEvents = generatePhenologyEvents(allOutputs)
+    const phenologyEvents = generatePhenologyEvents(result.dailyOutputs)
 
     /* 生成病虫害风险 */
-    const pestRisks = generatePestRisks(allOutputs, phenologyEvents)
+    const pestRisks = generatePestRisks(result.dailyOutputs, phenologyEvents)
 
     /* 生成农事操作 */
-    const farmOperations = generateFarmOperations(allOutputs, phenologyEvents)
+    const farmOperations = generateFarmOperations(result.dailyOutputs, phenologyEvents)
 
     /* 同步到store */
-    simStore.results = allOutputs.map(o => ({
-      day: o.das,
-      date: formatDateNum(o.day),
-      growthStage: stageName(o.stage),
-      lai: o.lai,
-      totalBiomass: o.biomass,
-      leafWeight: o.leafWt,
-      stemWeight: o.stemWt,
-      rootWeight: o.rootWt,
-      fruitWeight: o.fruitWt,
-      waterStress: o.swfac,
-      nitrogenStress: o.nstres,
-      srad: o.srad,
-      tmax: o.tmax,
-      tmin: o.tmin,
-      rain: o.rain,
-    }))
+    simStore.results = result.dailyOutputs.map(convertDailyOutputToResult)
 
+    const totalDays = result.dailyOutputs.length
     simStore.currentDay = totalDays
     simStore.status = 'complete'
     simStore.phenologyEvents = phenologyEvents
@@ -812,9 +977,9 @@ export function useSimulation() {
     simStore.addEvent('success', '链式模拟完成！共 ' + totalDays + ' 天')
 
     return {
-      dailyOutputs: allOutputs,
-      harvests: allHarvests,
-      summary,
+      dailyOutputs: result.dailyOutputs,
+      harvests: result.harvests,
+      summary: result.summary,
       phenologyEvents,
       pestRisks,
       farmOperations,

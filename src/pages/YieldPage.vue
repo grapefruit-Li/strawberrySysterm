@@ -2,12 +2,24 @@
 import { computed } from 'vue'
 import { useSimulationStore } from '@/stores/simulation'
 import { useConfigStore } from '@/stores/config'
+import { useSimulation } from '@/composables/useSimulation'
 import { useChart } from '@/composables/useChart'
 import VChart from 'vue-echarts'
 
 const simStore = useSimulationStore()
 const configStore = useConfigStore()
+const { runChainSimulation, isRunning } = useSimulation()
 const { yieldCurveOption, donutChartOption } = useChart()
+
+/* 重新计算 */
+function handleRecalculate() {
+  runChainSimulation()
+}
+
+/* 是否有配置但无结果 */
+const hasConfigNoResult = computed(() => {
+  return configStore.selectedCultivarFull && configStore.selectedRegion && !hasData.value
+})
 
 /* 是否有模拟结果 */
 const hasData = computed(() => simStore.results.length > 0 && simStore.yieldResult.totalFruitWeight > 0)
@@ -95,13 +107,28 @@ const yieldDetails = computed(() => {
 <template>
   <div class="yield-page">
     <div class="page-header">
-      <h2 class="page-title">🏆 产量预测</h2>
+      <div class="page-header-row">
+        <h2 class="page-title">🏆 产量预测</h2>
+        <button
+          class="recalc-btn"
+          :disabled="isRunning"
+          @click="handleRecalculate"
+        >
+          <span v-if="isRunning" class="recalc-spinner"></span>
+          {{ isRunning ? '计算中...' : '重新计算' }}
+        </button>
+      </div>
       <p class="page-subtitle" v-if="hasData">预估 {{ totalYield }} t/ha · 基于品种潜力和环境条件的产量预估</p>
       <p class="page-subtitle" v-else>基于品种潜力和环境条件的产量预估</p>
     </div>
 
+    <!-- 有配置但无结果提示 -->
+    <div v-if="hasConfigNoResult" class="timeline-section">
+      <p style="text-align:center;color:var(--text-muted);padding:20px 0;">💡 已选择品种和地区，点击「重新计算」生成年度种植方案</p>
+    </div>
+
     <!-- 无数据提示 -->
-    <div v-if="!hasData" class="timeline-section">
+    <div v-else-if="!hasData" class="timeline-section">
       <p style="text-align:center;color:var(--text-muted);padding:20px 0;">💡 尚无模拟数据，请先在基础信息页生成年度种植方案</p>
     </div>
 
@@ -125,13 +152,13 @@ const yieldDetails = computed(() => {
       <div class="chart-card">
         <h3 class="section-title">预测逐日产量</h3>
         <div class="chart-container" style="height: 300px">
-          <VChart :option="yieldCurveOption()" class="echarts-container" style="height: 300px" />
+          <VChart :option="yieldCurveOption(simStore.results)" class="echarts-container" style="height: 300px" />
         </div>
       </div>
       <div class="chart-card">
         <h3 class="section-title">第一/二茬占比</h3>
         <div class="donut-chart-container">
-          <VChart :option="donutChartOption()" class="echarts-container" style="height: 240px" />
+          <VChart :option="donutChartOption([{ name: '第一茬', value: firstFlushRatio, color: '#4CAF50' }, { name: '第二茬', value: 100 - firstFlushRatio, color: '#2196F3' }])" class="echarts-container" style="height: 240px" />
           <div class="donut-legend">
             <div v-for="legend in donutLegends" :key="legend.label" class="donut-legend-item">
               <div class="legend-color" :class="legend.colorClass"></div>
@@ -175,6 +202,51 @@ const yieldDetails = computed(() => {
 
 .page-header {
   margin-bottom: 24px;
+}
+
+.page-header-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.recalc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.recalc-btn:hover:not(:disabled) {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+.recalc-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.recalc-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--text-muted);
+  border-top-color: var(--accent-blue);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* 4个指标卡片 flex一行 */

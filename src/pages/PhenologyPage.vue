@@ -2,9 +2,24 @@
 import { computed } from 'vue'
 import { useSimulationStore } from '@/stores/simulation'
 import { useConfigStore } from '@/stores/config'
+import { useSimulation } from '@/composables/useSimulation'
+import { useChart } from '@/composables/useChart'
+import VChart from 'vue-echarts'
 
 const simStore = useSimulationStore()
 const configStore = useConfigStore()
+const { runChainSimulation, isRunning } = useSimulation()
+const { ganttTimelineOption } = useChart()
+
+/* 重新计算 */
+function handleRecalculate() {
+  runChainSimulation()
+}
+
+/* 是否有配置但无结果 */
+const hasConfigNoResult = computed(() => {
+  return configStore.selectedCultivarFull && configStore.selectedRegion && !hasData.value
+})
 
 /* 月份标签 */
 const months = ['9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月']
@@ -118,12 +133,27 @@ const timelineSegments = computed(() => {
 <template>
   <div class="phenology-page">
     <div class="page-header">
-      <h2 class="page-title">物候方案</h2>
+      <div class="page-header-row">
+        <h2 class="page-title">物候方案</h2>
+        <button
+          class="recalc-btn"
+          :disabled="isRunning"
+          @click="handleRecalculate"
+        >
+          <span v-if="isRunning" class="recalc-spinner"></span>
+          {{ isRunning ? '计算中...' : '重新计算' }}
+        </button>
+      </div>
       <p class="page-subtitle">基于积温模型 + 光周期响应预测的全年物候时间轴 · {{ plantingDateDisplay }}定植</p>
     </div>
 
+    <!-- 有配置但无结果提示 -->
+    <div v-if="hasConfigNoResult" class="phenology-note">
+      💡 已选择品种和地区，点击「重新计算」生成年度种植方案
+    </div>
+
     <!-- 无数据提示 -->
-    <div v-if="!hasData" class="phenology-note">
+    <div v-else-if="!hasData" class="phenology-note">
       💡 尚无模拟数据，请先在基础信息页生成年度种植方案
     </div>
 
@@ -201,6 +231,14 @@ const timelineSegments = computed(() => {
       </div>
     </div>
 
+    <!-- 物候甘特图 -->
+    <div class="timeline-section">
+      <h3 class="section-title">物候阶段甘特图</h3>
+      <div class="chart-container" style="height: 300px">
+        <VChart :option="ganttTimelineOption(simStore.phenologyEvents)" class="echarts-container" style="height: 300px" />
+      </div>
+    </div>
+
     <!-- 底部提示 -->
     <div class="phenology-note">
       💡 {{ configStore.selectedCultivarFull?.name ?? configStore.cultivarName }} 为{{ configStore.cultivationMode === 'greenhouse' ? '温室' : '露地' }}栽培，{{ configStore.selectedCultivarFull?.type ?? '短日型' }}，日长&lt;11.5hr触发花芽分化
@@ -216,6 +254,55 @@ const timelineSegments = computed(() => {
 
 .page-header {
   margin-bottom: 24px;
+}
+
+.page-header-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.recalc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.recalc-btn:hover:not(:disabled) {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+.recalc-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.recalc-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--text-muted);
+  border-top-color: var(--accent-blue);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.chart-container {
+  width: 100%;
 }
 
 /* 4个阶段卡片 flex一行 */

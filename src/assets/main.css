@@ -16,20 +16,6 @@
   body {
     @apply antialiased;
   }
-
-  /* 滚动条样式 */
-  ::-webkit-scrollbar {
-    @apply w-2;
-  }
-  ::-webkit-scrollbar-track {
-    @apply bg-midnight-800;
-  }
-  ::-webkit-scrollbar-thumb {
-    @apply bg-midnight-600 rounded-full;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-midnight-500;
-  }
 }
 
 /* 自定义组件类 */
@@ -45,13 +31,6 @@
            px-5 py-2.5 rounded-lg transition-all duration-200
            shadow-lg shadow-strawberry-500/25 hover:shadow-strawberry-500/40
            active:scale-95;
-  }
-
-  /* 幽灵按钮 */
-  .ghost-btn {
-    @apply bg-transparent hover:bg-midnight-700/50 text-midnight-200
-           font-medium px-4 py-2 rounded-lg transition-all duration-200
-           border border-midnight-600/40 hover:border-midnight-500/60;
   }
 
   /* 输入框 */
@@ -75,18 +54,7 @@
     @apply text-xs text-midnight-400 uppercase tracking-wider;
   }
 
-  /* 区块标题 */
-  .section-title {
-    @apply text-lg font-heading text-midnight-50 mb-4;
-  }
-
   /* 导航项 */
-  .nav-item {
-    @apply flex items-center gap-3 px-4 py-3 rounded-lg
-           text-midnight-300 hover:text-midnight-100 hover:bg-midnight-700/40
-           transition-all duration-200 cursor-pointer;
-  }
-
   .nav-item-active {
     @apply flex items-center gap-3 px-4 py-3 rounded-lg
            text-strawberry-500 bg-strawberry-500/10

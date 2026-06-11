@@ -9,6 +9,8 @@ import {
   GridComponent,
   DataZoomComponent,
 } from 'echarts/components'
+import type { DailyResult } from '@/stores/simulation'
+import type { PhenologyEvent, PestRiskRecord, HarvestRecord } from '@/engine/types'
 
 /* 注册 ECharts 组件 */
 use([
@@ -166,123 +168,203 @@ export function useChart() {
   }
 
   /* 病虫害风险指数图表 */
-  function riskIndexOption(_pestRisks?: any[]) {
+  function riskIndexOption(_pestRisks?: PestRiskRecord[]) {
+    /* 病虫害颜色映射 */
+    const pestColorMap: Record<string, string> = {
+      '灰霉病': '#8B5CF6',
+      '蚜虫': '#F97316',
+      '红蜘蛛': '#22C55E',
+      '白粉病': '#EC4899',
+      '炭疽病': '#EF4444',
+    }
+
+    if (_pestRisks && _pestRisks.length > 0) {
+      /* 从真实数据构建图表 - 按月聚合每日风险指数 */
+      const monthLabels = ['10月', '11月', '12月', '1月', '2月', '3月', '4月', '5月']
+
+      const series = _pestRisks.map(risk => {
+        /* 按月聚合风险指数 */
+        const monthlyData: Record<string, number[]> = {}
+        for (const ml of monthLabels) monthlyData[ml] = []
+
+        for (const dr of risk.dailyRiskIndex) {
+          const dateStr = dr.date
+          const month = parseInt(dateStr.length === 8 ? dateStr.slice(4, 6) : dateStr.slice(5, 7))
+          const monthIdx = month >= 10 ? month - 10 : month + 3
+          if (monthIdx >= 0 && monthIdx < monthLabels.length) {
+            monthlyData[monthLabels[monthIdx]].push(dr.index)
+          }
+        }
+
+        const avgByMonth = monthLabels.map(ml => {
+          const vals = monthlyData[ml]
+          return vals.length > 0 ? Math.round(vals.reduce((s, v) => s + v, 0) / vals.length) : 0
+        })
+
+        return {
+          name: risk.name,
+          type: 'bar' as const,
+          data: avgByMonth,
+          itemStyle: { color: pestColorMap[risk.name] ?? '#6b7280', borderRadius: [3, 3, 0, 0] },
+          barMaxWidth: 20,
+        }
+      })
+
+      return {
+        ...chartTheme,
+        grid: { left: 50, right: 20, top: 40, bottom: 40 },
+        tooltip: {
+          trigger: 'axis' as const,
+          backgroundColor: 'rgba(26, 27, 46, 0.9)',
+          borderColor: 'rgba(45, 49, 66, 0.5)',
+          textStyle: { color: '#F3F4F6' },
+        },
+        legend: {
+          data: _pestRisks.map(r => r.name),
+          textStyle: { color: '#9CA3AF' },
+          top: 5,
+        },
+        xAxis: {
+          type: 'category' as const,
+          data: monthLabels,
+          axisLine: { lineStyle: { color: '#374151' } },
+          axisLabel: { color: '#9CA3AF' },
+        },
+        yAxis: {
+          type: 'value' as const,
+          name: '风险指数',
+          nameTextStyle: { color: '#9CA3AF' },
+          max: 100,
+          axisLine: { lineStyle: { color: '#374151' } },
+          axisLabel: { color: '#9CA3AF' },
+          splitLine: { lineStyle: { color: 'rgba(55, 65, 81, 0.5)' } },
+        },
+        series,
+      }
+    }
+
+    /* 无数据时显示空图表 */
     return {
-    ...chartTheme,
-    grid: { left: 50, right: 20, top: 40, bottom: 40 },
-    tooltip: {
-      trigger: 'axis' as const,
-      backgroundColor: 'rgba(26, 27, 46, 0.9)',
-      borderColor: 'rgba(45, 49, 66, 0.5)',
-      textStyle: { color: '#F3F4F6' },
-    },
-    legend: {
-      data: ['灰霉病', '蚜虫', '红蜘蛛', '白粉病'],
-      textStyle: { color: '#9CA3AF' },
-      top: 5,
-    },
-    xAxis: {
-      type: 'category' as const,
-      data: ['10月', '11月', '12月', '1月', '2月', '3月'],
-      axisLine: { lineStyle: { color: '#374151' } },
-      axisLabel: { color: '#9CA3AF' },
-    },
-    yAxis: {
-      type: 'value' as const,
-      name: '风险指数',
-      nameTextStyle: { color: '#9CA3AF' },
-      max: 100,
-      axisLine: { lineStyle: { color: '#374151' } },
-      axisLabel: { color: '#9CA3AF' },
-      splitLine: { lineStyle: { color: 'rgba(55, 65, 81, 0.5)' } },
-    },
-    series: [
-      {
-        name: '灰霉病',
-        type: 'bar',
-        data: [30, 65, 85, 70, 40, 20],
-        itemStyle: { color: '#8B5CF6', borderRadius: [3, 3, 0, 0] },
-        barMaxWidth: 20,
+      ...chartTheme,
+      grid: { left: 50, right: 20, top: 40, bottom: 40 },
+      title: {
+        text: '暂无数据',
+        left: 'center',
+        top: 'center',
+        textStyle: { color: '#6b7280', fontSize: 14, fontWeight: 'normal' },
       },
-      {
-        name: '蚜虫',
-        type: 'bar',
-        data: [20, 40, 30, 25, 55, 70],
-        itemStyle: { color: '#F97316', borderRadius: [3, 3, 0, 0] },
-        barMaxWidth: 20,
+      xAxis: {
+        type: 'category' as const,
+        data: [],
+        axisLine: { lineStyle: { color: '#374151' } },
+        axisLabel: { color: '#9CA3AF' },
       },
-      {
-        name: '红蜘蛛',
-        type: 'bar',
-        data: [15, 25, 20, 15, 45, 60],
-        itemStyle: { color: '#22C55E', borderRadius: [3, 3, 0, 0] },
-        barMaxWidth: 20,
+      yAxis: {
+        type: 'value' as const,
+        max: 100,
+        axisLine: { lineStyle: { color: '#374151' } },
+        axisLabel: { color: '#9CA3AF' },
+        splitLine: { lineStyle: { color: 'rgba(55, 65, 81, 0.5)' } },
       },
-      {
-        name: '白粉病',
-        type: 'bar',
-        data: [10, 35, 50, 45, 60, 40],
-        itemStyle: { color: '#EC4899', borderRadius: [3, 3, 0, 0] },
-        barMaxWidth: 20,
-      },
-    ],
+      series: [],
     }
   }
 
   /* 产量预测折线图 */
-  function yieldCurveOption(_dailyOutputs?: any[], _harvests?: any[]) {
-    return {
-    ...chartTheme,
-    grid: { left: 60, right: 30, top: 40, bottom: 50 },
-    tooltip: {
-      trigger: 'axis' as const,
-      backgroundColor: 'rgba(26, 27, 46, 0.9)',
-      borderColor: 'rgba(45, 49, 66, 0.5)',
-      textStyle: { color: '#F3F4F6' },
-    },
-    xAxis: {
-      type: 'category' as const,
-      data: Array.from({ length: 30 }, (_, i) => `第${i + 1}周`),
-      axisLine: { lineStyle: { color: '#374151' } },
-      axisLabel: { color: '#9CA3AF', interval: 4 },
-    },
-    yAxis: {
-      type: 'value' as const,
-      name: '产量 (kg/ha)',
-      nameTextStyle: { color: '#9CA3AF' },
-      axisLine: { lineStyle: { color: '#374151' } },
-      axisLabel: { color: '#9CA3AF' },
-      splitLine: { lineStyle: { color: 'rgba(55, 65, 81, 0.5)' } },
-    },
-    series: [
-      {
-        name: '预测产量',
-        type: 'line',
-        smooth: true,
-        data: [
-          0, 0, 0, 0, 0, 0, 0, 0, 50, 120,
-          250, 400, 580, 750, 900, 1050, 1180, 1280, 1350, 1400,
-          1420, 1380, 1300, 1200, 1080, 950, 800, 650, 500, 350,
-        ],
-        lineStyle: { width: 2, color: '#22C55E' },
-        itemStyle: { color: '#22C55E' },
-        areaStyle: {
-          color: {
-            type: 'linear' as const,
-            x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(34, 197, 94, 0.3)' },
-              { offset: 1, color: 'rgba(34, 197, 94, 0.02)' },
-            ],
-          },
+  function yieldCurveOption(_dailyOutputs?: DailyResult[], _harvests?: HarvestRecord[]) {
+    if (_dailyOutputs && _dailyOutputs.length > 0) {
+      /* 从真实模拟数据构建产量曲线 */
+      const xData = _dailyOutputs.map(r => {
+        const parts = r.date.split('-')
+        return `${parseInt(parts[1])}/${parseInt(parts[2])}`
+      })
+      const fruitData = _dailyOutputs.map(r => Math.round(r.fruitWeight * 10) / 10)
+
+      return {
+        ...chartTheme,
+        grid: { left: 60, right: 30, top: 40, bottom: 50 },
+        tooltip: {
+          trigger: 'axis' as const,
+          backgroundColor: 'rgba(26, 27, 46, 0.9)',
+          borderColor: 'rgba(45, 49, 66, 0.5)',
+          textStyle: { color: '#F3F4F6' },
         },
+        dataZoom: [
+          {
+            type: 'inside' as const,
+            start: 0,
+            end: 100,
+          },
+        ],
+        xAxis: {
+          type: 'category' as const,
+          data: xData,
+          axisLine: { lineStyle: { color: '#374151' } },
+          axisLabel: { color: '#9CA3AF', interval: Math.floor(xData.length / 8) },
+        },
+        yAxis: {
+          type: 'value' as const,
+          name: '产量 (kg/ha)',
+          nameTextStyle: { color: '#9CA3AF' },
+          axisLine: { lineStyle: { color: '#374151' } },
+          axisLabel: { color: '#9CA3AF' },
+          splitLine: { lineStyle: { color: 'rgba(55, 65, 81, 0.5)' } },
+        },
+        series: [
+          {
+            name: '预测产量',
+            type: 'line',
+            smooth: true,
+            data: fruitData,
+            lineStyle: { width: 2, color: '#22C55E' },
+            itemStyle: { color: '#22C55E' },
+            areaStyle: {
+              color: {
+                type: 'linear' as const,
+                x: 0, y: 0, x2: 0, y2: 1,
+                colorStops: [
+                  { offset: 0, color: 'rgba(34, 197, 94, 0.3)' },
+                  { offset: 1, color: 'rgba(34, 197, 94, 0.02)' },
+                ],
+              },
+            },
+          },
+        ],
+      }
+    }
+
+    /* 无数据时显示空图表 */
+    return {
+      ...chartTheme,
+      grid: { left: 60, right: 30, top: 40, bottom: 50 },
+      title: {
+        text: '暂无数据',
+        left: 'center',
+        top: 'center',
+        textStyle: { color: '#6b7280', fontSize: 14, fontWeight: 'normal' },
       },
-    ],
+      xAxis: {
+        type: 'category' as const,
+        data: [],
+        axisLine: { lineStyle: { color: '#374151' } },
+        axisLabel: { color: '#9CA3AF' },
+      },
+      yAxis: {
+        type: 'value' as const,
+        name: '产量 (kg/ha)',
+        nameTextStyle: { color: '#9CA3AF' },
+        axisLine: { lineStyle: { color: '#374151' } },
+        axisLabel: { color: '#9CA3AF' },
+        splitLine: { lineStyle: { color: 'rgba(55, 65, 81, 0.5)' } },
+      },
+      series: [],
     }
   }
 
   /* 第一/二茬占比环形图 */
   function donutChartOption(data?: { name: string; value: number; color: string }[]) {
+    const hasValidData = data && data.length > 0 && data.some(d => d.value > 0)
+
     return {
     ...chartTheme,
     tooltip: {
@@ -313,11 +395,10 @@ export function useChart() {
           color: '#e6edf3',
           formatter: '{b}\n{d}%',
         },
-        data: data && data.length > 0
-          ? data.map(d => ({ value: d.value, name: d.name, itemStyle: { color: d.color } }))
+        data: hasValidData
+          ? data!.map(d => ({ value: d.value, name: d.name, itemStyle: { color: d.color } }))
           : [
-              { value: 62, name: '第一茬果', itemStyle: { color: '#22C55E' } },
-              { value: 38, name: '第二茬果', itemStyle: { color: '#3B82F6' } },
+              { value: 0, name: '暂无数据', itemStyle: { color: '#374151' } },
             ],
       },
     ],
@@ -325,43 +406,93 @@ export function useChart() {
   }
 
   /* 甘特图时间轴选项 */
-  function ganttTimelineOption(_events?: any[]) {
-    return {
-    ...chartTheme,
-    grid: { left: 100, right: 30, top: 20, bottom: 30 },
-    tooltip: {
-      trigger: 'axis' as const,
-      backgroundColor: 'rgba(26, 27, 46, 0.9)',
-      borderColor: 'rgba(45, 49, 66, 0.5)',
-      textStyle: { color: '#F3F4F6' },
-    },
-    xAxis: {
-      type: 'category' as const,
-      data: ['10月', '11月', '12月', '1月', '2月', '3月'],
-      axisLine: { lineStyle: { color: '#374151' } },
-      axisLabel: { color: '#9CA3AF' },
-    },
-    yAxis: {
-      type: 'category' as const,
-      data: ['采收', '果实膨大', '开花', '营养生长', '定植'],
-      axisLine: { lineStyle: { color: '#374151' } },
-      axisLabel: { color: '#9CA3AF' },
-    },
-    series: [
-      {
-        type: 'bar',
-        stack: 'total',
-        data: [
-          { value: 3, itemStyle: { color: '#78716c' } },
-          { value: 3, itemStyle: { color: '#ef4444' } },
-          { value: 2, itemStyle: { color: '#f97316' } },
-          { value: 2, itemStyle: { color: '#22c55e' } },
-          { value: 1, itemStyle: { color: '#4ade80' } },
+  function ganttTimelineOption(_events?: PhenologyEvent[]) {
+    /* 阶段颜色映射 */
+    const stageColorMap: Record<string, string> = {
+      '萌芽期': '#4ade80',
+      '营养生长期': '#22c55e',
+      '花芽分化期': '#f97316',
+      '开花期': '#f97316',
+      '结果期': '#ef4444',
+      '果实膨大期': '#ef4444',
+      '采收期': '#78716c',
+    }
+
+    if (_events && _events.length > 0) {
+      /* 从真实物候事件构建甘特图 */
+      const yLabels = _events.map(e => e.name).reverse()
+      const monthLabels = ['9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月', '5月']
+
+      /* 计算每个阶段跨越的月份数 */
+      const barData = _events.map(e => {
+        const startMonth = Math.floor((e.startDate % 10000) / 100)
+        const endMonth = Math.floor((e.endDate % 10000) / 100)
+        /* 将月份映射到月标签索引: 9月=0, 10月=1, ..., 4月=7, 5月=8 */
+        const startIdx = startMonth >= 9 ? startMonth - 9 : startMonth + 3
+        const endIdx = endMonth >= 9 ? endMonth - 9 : endMonth + 3
+        const duration = Math.max(1, endIdx - startIdx + 1)
+        return {
+          value: duration,
+          itemStyle: { color: stageColorMap[e.name] ?? '#6b7280' },
+        }
+      }).reverse()
+
+      return {
+        ...chartTheme,
+        grid: { left: 100, right: 30, top: 20, bottom: 30 },
+        tooltip: {
+          trigger: 'axis' as const,
+          backgroundColor: 'rgba(26, 27, 46, 0.9)',
+          borderColor: 'rgba(45, 49, 66, 0.5)',
+          textStyle: { color: '#F3F4F6' },
+        },
+        xAxis: {
+          type: 'category' as const,
+          data: monthLabels,
+          axisLine: { lineStyle: { color: '#374151' } },
+          axisLabel: { color: '#9CA3AF' },
+        },
+        yAxis: {
+          type: 'category' as const,
+          data: yLabels,
+          axisLine: { lineStyle: { color: '#374151' } },
+          axisLabel: { color: '#9CA3AF' },
+        },
+        series: [
+          {
+            type: 'bar',
+            stack: 'total',
+            data: barData,
+            barWidth: 20,
+            itemStyle: { borderRadius: 4 },
+          },
         ],
-        barWidth: 20,
-        itemStyle: { borderRadius: 4 },
+      }
+    }
+
+    /* 无数据时显示空图表 */
+    return {
+      ...chartTheme,
+      grid: { left: 100, right: 30, top: 20, bottom: 30 },
+      title: {
+        text: '暂无数据',
+        left: 'center',
+        top: 'center',
+        textStyle: { color: '#6b7280', fontSize: 14, fontWeight: 'normal' },
       },
-    ],
+      xAxis: {
+        type: 'category' as const,
+        data: [],
+        axisLine: { lineStyle: { color: '#374151' } },
+        axisLabel: { color: '#9CA3AF' },
+      },
+      yAxis: {
+        type: 'category' as const,
+        data: [],
+        axisLine: { lineStyle: { color: '#374151' } },
+        axisLabel: { color: '#9CA3AF' },
+      },
+      series: [],
     }
   }
 

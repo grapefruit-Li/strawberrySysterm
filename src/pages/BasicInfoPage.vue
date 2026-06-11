@@ -101,6 +101,97 @@ watch(selectedSeedling, (v) => { config.seedlingQuality = v as any })
 /* 是否正在生成 */
 const generating = ref(false)
 
+/* 已上传文件名 */
+const uploadedFileName = ref('')
+
+/* ========== 内联 WTH 解析器 ========== */
+
+/** 解析 DSSAT .WTH 文件内容为 WeatherRecord[] */
+function parseWTHContent(content: string) {
+  const lines = content.split(/\r?\n/).filter(l => l.trim())
+  const records: { date: string; srad: number; tmax: number; tmin: number; rain: number; co2: number }[] = []
+
+  let headerLineIdx = -1
+  let headerCols: string[] = []
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim()
+    if (trimmed.startsWith('@') && trimmed.toUpperCase().includes('DATE')) {
+      headerLineIdx = i
+      headerCols = trimmed.substring(1).trim().split(/\s+/).map(c => c.toUpperCase())
+      break
+    }
+  }
+
+  if (headerLineIdx < 0) return records
+
+  const colIdx: Record<string, number> = {}
+  headerCols.forEach((col, idx) => { colIdx[col] = idx })
+
+  for (let i = headerLineIdx + 1; i < lines.length; i++) {
+    const trimmed = lines[i].trim()
+    if (!trimmed || trimmed.startsWith('*') || trimmed.startsWith('@') || trimmed.startsWith('!')) continue
+
+    const parts = trimmed.split(/\s+/)
+    if (parts.length < 3) continue
+
+    const dateVal = parts[colIdx['DATE'] ?? 0]
+    if (!dateVal) continue
+
+    let year: number, month: number, day: number
+    const dateNum = parseInt(dateVal, 10)
+    if (dateVal.length <= 5) {
+      const yy = Math.floor(dateNum / 1000)
+      year = yy >= 50 ? 1900 + yy : 2000 + yy
+      const doy = dateNum % 1000
+      const d = new Date(year, 0, doy)
+      month = d.getMonth() + 1
+      day = d.getDate()
+    } else {
+      year = Math.floor(dateNum / 1000)
+      const doy = dateNum % 1000
+      const d = new Date(year, 0, doy)
+      month = d.getMonth() + 1
+      day = d.getDate()
+    }
+
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    const srad = colIdx['SRAD'] !== undefined ? parseFloat(parts[colIdx['SRAD']]) || 0 : 0
+    const tmax = colIdx['TMAX'] !== undefined ? parseFloat(parts[colIdx['TMAX']]) || 0 : 0
+    const tmin = colIdx['TMIN'] !== undefined ? parseFloat(parts[colIdx['TMIN']]) || 0 : 0
+    const rain = colIdx['RAIN'] !== undefined ? parseFloat(parts[colIdx['RAIN']]) || 0 : 0
+
+    records.push({ date: dateStr, srad, tmax, tmin, rain, co2: 410 })
+  }
+
+  return records
+}
+
+/* 处理天气文件上传 */
+function handleWeatherUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (!input.files || input.files.length === 0) return
+
+  const file = input.files[0]
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const content = e.target?.result as string
+    if (!content) return
+
+    const records = parseWTHContent(content)
+    if (records.length > 0) {
+      config.weatherData = records
+      uploadedFileName.value = file.name
+    }
+  }
+  reader.readAsText(file)
+}
+
+/* 点击上传区域触发文件选择 */
+function triggerWeatherUpload() {
+  const input = document.getElementById('weather-file-input') as HTMLInputElement
+  input?.click()
+}
+
 /* 生成年度种植方案 */
 async function generatePlan() {
   generating.value = true
@@ -272,11 +363,25 @@ async function generatePlan() {
           <label class="card-label">气象文件 (可选)</label>
           <span class="card-badge">DSSAT格式</span>
         </div>
-        <div class="file-upload-card">
-          <div class="upload-icon">☁️</div>
-          <div class="upload-text">点击上传 DSSAT 气象文件</div>
-          <div class="upload-hint">支持 .WTH, .CLI 格式</div>
+        <div class="file-upload-card" @click="triggerWeatherUpload">
+          <template v-if="!uploadedFileName">
+            <div class="upload-icon">☁️</div>
+            <div class="upload-text">点击上传 DSSAT 气象文件</div>
+            <div class="upload-hint">支持 .WTH, .CLI 格式</div>
+          </template>
+          <template v-else>
+            <div class="upload-icon">✅</div>
+            <div class="upload-text">{{ uploadedFileName }}</div>
+            <div class="upload-hint">点击重新上传</div>
+          </template>
         </div>
+        <input
+          id="weather-file-input"
+          type="file"
+          accept=".WTH,.wth,.CLI,.cli"
+          class="hidden"
+          @change="handleWeatherUpload"
+        />
       </div>
     </div>
 
