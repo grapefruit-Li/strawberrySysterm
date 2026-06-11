@@ -3,7 +3,7 @@ import { ref } from 'vue'
 /* 解析后的文件数据 */
 export interface ParsedFile {
   name: string
-  type: 'WTH' | 'SOL' | 'CUL' | 'SPE' | 'ECO' | 'JSON' | 'unknown'
+  type: 'WTH' | 'SOL' | 'CUL' | 'SPE' | 'ECO' | 'JSON' | 'XLSX' | 'XLS' | 'CLI' | 'unknown'
   content: string
   lines: string[]
   parsed: boolean
@@ -18,7 +18,7 @@ export function useFileParser() {
   /* 判断文件类型 */
   function getFileType(filename: string): ParsedFile['type'] {
     const ext = filename.split('.').pop()?.toUpperCase() || ''
-    if (['WTH', 'SOL', 'CUL', 'SPE', 'ECO', 'JSON'].includes(ext)) {
+    if (['WTH', 'SOL', 'CUL', 'SPE', 'ECO', 'JSON', 'XLSX', 'XLS', 'CLI'].includes(ext)) {
       return ext as ParsedFile['type']
     }
     return 'unknown'

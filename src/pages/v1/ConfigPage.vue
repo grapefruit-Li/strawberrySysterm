@@ -13,10 +13,12 @@ import {
   Plus,
   Trash2,
   Upload,
+  Download,
   Play,
   Pencil,
   RotateCcw,
 } from 'lucide-vue-next'
+import { parseWeatherFile, downloadWeatherTemplate } from '@/composables/useWeatherParser'
 
 const config = useConfigStore()
 const simulation = useSimulationStore()
@@ -75,6 +77,43 @@ function onRegionSelect(id: string) {
   const region = config.regionList.find((r: RegionConfig) => r.id === id)
   if (region) {
     config.setRegion(region)
+  }
+}
+
+/* 天气文件上传 */
+const isDragging = ref(false)
+const uploadedWeatherName = ref('')
+const weatherFileInput = ref<HTMLInputElement | null>(null)
+
+function triggerWeatherUpload() {
+  (weatherFileInput.value as HTMLInputElement)?.click()
+}
+
+async function onWeatherFileSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (!input.files || input.files.length === 0) return
+  const file = input.files[0]
+  const { records, error } = await parseWeatherFile(file)
+  if (records.length > 0) {
+    config.weatherData = records
+    uploadedWeatherName.value = file.name
+  } else {
+    alert(error || '解析失败')
+  }
+  // Reset input so same file can be re-selected
+  input.value = ''
+}
+
+async function onWeatherDrop(event: DragEvent) {
+  isDragging.value = false
+  if (!event.dataTransfer?.files) return
+  const file = event.dataTransfer.files[0]
+  const { records, error } = await parseWeatherFile(file)
+  if (records.length > 0) {
+    config.weatherData = records
+    uploadedWeatherName.value = file.name
+  } else {
+    alert(error || '解析失败')
   }
 }
 
@@ -216,13 +255,32 @@ function startSimulation() {
 
       <!-- 文件上传 -->
       <div class="glass-card p-5">
-        <h3 class="text-sm font-semibold text-midnight-200 mb-4">导入气象文件</h3>
-        <div class="drop-zone flex flex-col items-center gap-2">
-          <Upload :size="24" class="text-midnight-400" />
-          <p class="text-sm text-midnight-400">拖放 .WTH 文件到此处，或点击选择文件</p>
-          <p class="text-xs text-midnight-400">支持 DSSAT 格式气象文件</p>
-          <input type="file" accept=".WTH,.wth" class="hidden" />
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-midnight-200">导入气象文件</h3>
+          <button class="ghost-btn flex items-center gap-1.5 text-sm" @click="downloadWeatherTemplate">
+            <Download :size="14" />
+            下载模板
+          </button>
         </div>
+        <div
+          class="drop-zone flex flex-col items-center gap-2 cursor-pointer"
+          @dragover.prevent="isDragging = true"
+          @dragleave.prevent="isDragging = false"
+          @drop.prevent="onWeatherDrop"
+          @click="triggerWeatherUpload"
+        >
+          <Upload :size="24" class="text-midnight-400" />
+          <p class="text-sm text-midnight-400">拖放文件到此处，或点击选择文件</p>
+          <p class="text-xs text-midnight-400">支持 .WTH、.xlsx、.xls 格式</p>
+          <p v-if="uploadedWeatherName" class="text-xs text-forest-400 mt-1">已上传: {{ uploadedWeatherName }}</p>
+        </div>
+        <input
+          ref="weatherFileInput"
+          type="file"
+          accept=".WTH,.wth,.xlsx,.xls,.CLI,.cli"
+          class="hidden"
+          @change="onWeatherFileSelected"
+        />
       </div>
     </div>
 

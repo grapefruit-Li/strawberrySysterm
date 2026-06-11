@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useFileParser } from '@/composables/useFileParser'
 import { useConfigStore } from '@/stores/config'
-import type { WeatherRecord } from '@/stores/config'
+import { parseWeatherFile, downloadWeatherTemplate } from '@/composables/useWeatherParser'
 import {
   Upload,
   FileText,
@@ -24,7 +24,7 @@ const history = ref([
 ])
 
 /* 支持的文件类型 */
-const acceptedTypes = '.WTH,.wth,.SOL,.sol,.CUL,.cul,.SPE,.spe,.ECO,.eco,.json,.JSON'
+const acceptedTypes = '.WTH,.wth,.SOL,.sol,.CUL,.cul,.SPE,.spe,.ECO,.eco,.json,.JSON,.xlsx,.XLSX,.xls,.XLS'
 
 /* 文件类型颜色 */
 function fileTypeColor(type: string): string {
@@ -35,78 +35,10 @@ function fileTypeColor(type: string): string {
     SPE: 'text-purple-400 bg-purple-500/20',
     ECO: 'text-forest-400 bg-forest-500/20',
     JSON: 'text-blue-400 bg-blue-500/20',
+    XLSX: 'text-green-400 bg-green-500/20',
+    XLS: 'text-green-400 bg-green-500/20',
   }
   return map[type] || 'text-midnight-300 bg-midnight-700/30'
-}
-
-/* ========== 内联 WTH 解析器 ========== */
-
-/** 解析 DSSAT .WTH 文件内容为 WeatherRecord[] */
-function parseWTHContent(content: string): WeatherRecord[] {
-  const lines = content.split(/\r?\n/).filter(l => l.trim())
-  const records: WeatherRecord[] = []
-
-  // 找到数据头行（以 @ 开头，包含 DATE 的行）
-  let headerLineIdx = -1
-  let headerCols: string[] = []
-  for (let i = 0; i < lines.length; i++) {
-    const trimmed = lines[i].trim()
-    if (trimmed.startsWith('@') && trimmed.toUpperCase().includes('DATE')) {
-      headerLineIdx = i
-      headerCols = trimmed.substring(1).trim().split(/\s+/).map(c => c.toUpperCase())
-      break
-    }
-  }
-
-  if (headerLineIdx < 0) return records
-
-  // 找到各列索引
-  const colIdx: Record<string, number> = {}
-  headerCols.forEach((col, idx) => { colIdx[col] = idx })
-
-  // 解析数据行
-  for (let i = headerLineIdx + 1; i < lines.length; i++) {
-    const trimmed = lines[i].trim()
-    // 跳过空行、注释行、新的头行
-    if (!trimmed || trimmed.startsWith('*') || trimmed.startsWith('@') || trimmed.startsWith('!')) continue
-
-    const parts = trimmed.split(/\s+/)
-    if (parts.length < 3) continue
-
-    // 解析日期：DSSAT 格式为 YYDDD 或 YYYYDDD
-    const dateVal = parts[colIdx['DATE'] ?? 0]
-    if (!dateVal) continue
-
-    let year: number, month: number, day: number
-    const dateNum = parseInt(dateVal, 10)
-    if (dateVal.length <= 5) {
-      // YYDDD 格式
-      const yy = Math.floor(dateNum / 1000)
-      year = yy >= 50 ? 1900 + yy : 2000 + yy
-      const doy = dateNum % 1000
-      const d = new Date(year, 0, doy)
-      month = d.getMonth() + 1
-      day = d.getDate()
-    } else {
-      // YYYYDDD 格式
-      year = Math.floor(dateNum / 1000)
-      const doy = dateNum % 1000
-      const d = new Date(year, 0, doy)
-      month = d.getMonth() + 1
-      day = d.getDate()
-    }
-
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-
-    const srad = colIdx['SRAD'] !== undefined ? parseFloat(parts[colIdx['SRAD']]) || 0 : 0
-    const tmax = colIdx['TMAX'] !== undefined ? parseFloat(parts[colIdx['TMAX']]) || 0 : 0
-    const tmin = colIdx['TMIN'] !== undefined ? parseFloat(parts[colIdx['TMIN']]) || 0 : 0
-    const rain = colIdx['RAIN'] !== undefined ? parseFloat(parts[colIdx['RAIN']]) || 0 : 0
-
-    records.push({ date: dateStr, srad, tmax, tmin, rain, co2: 410 })
-  }
-
-  return records
 }
 
 /** 处理导入的文件，解析并更新 store */
@@ -114,33 +46,32 @@ async function processImportedFiles(fileList: FileList | File[]) {
   const newFiles = Array.from(fileList)
   for (const file of newFiles) {
     const ext = file.name.split('.').pop()?.toUpperCase() || ''
-    const content = await readFileAsText(file)
 
-    if (ext === 'WTH') {
-      const records = parseWTHContent(content)
+    if (ext === 'WTH' || ext === 'CLI' || ext === 'XLSX' || ext === 'XLS') {
+      const { records, error } = await parseWeatherFile(file)
       if (records.length > 0) {
         config.weatherData = records
         files.value.push({
           name: file.name,
-          type: 'WTH',
-          content,
-          lines: content.split(/\r?\n/).filter(l => l.trim()),
+          type: ext,
+          content: `已解析 ${records.length} 条气象记录`,
+          lines: [],
           parsed: true,
         })
       } else {
         files.value.push({
           name: file.name,
-          type: 'WTH',
-          content,
-          lines: content.split(/\r?\n/).filter(l => l.trim()),
+          type: ext,
+          content: '',
+          lines: [],
           parsed: false,
-          error: '未找到有效的气象数据行',
+          error: error || '解析失败',
         })
       }
     } else if (ext === 'JSON') {
+      const content = await file.text()
       try {
         const data = JSON.parse(content)
-        // 尝试解析为配置文件
         if (data.station) {
           if (data.station.name) config.stationName = data.station.name
           if (data.station.lat !== undefined) config.stationLat = data.station.lat
@@ -161,47 +92,23 @@ async function processImportedFiles(fileList: FileList | File[]) {
           if (data.management.irrigation) config.irrigationEvents = data.management.irrigation
           if (data.management.fertilizer) config.fertilizerEvents = data.management.fertilizer
         }
-        files.value.push({
-          name: file.name,
-          type: 'JSON',
-          content,
-          lines: content.split(/\r?\n/).filter(l => l.trim()),
-          parsed: true,
-        })
+        files.value.push({ name: file.name, type: 'JSON', content, lines: content.split(/\r?\n/).filter(l => l.trim()), parsed: true })
       } catch {
-        files.value.push({
-          name: file.name,
-          type: 'JSON',
-          content,
-          lines: content.split(/\r?\n/).filter(l => l.trim()),
-          parsed: false,
-          error: 'JSON 解析失败',
-        })
+        files.value.push({ name: file.name, type: 'JSON', content: '', lines: [], parsed: false, error: 'JSON 解析失败' })
       }
     } else {
-      // 其他文件类型，使用默认解析
-      const lines = content.split(/\r?\n/).filter(l => l.trim())
+      const content = await file.text()
       const fileType = ['SOL', 'CUL', 'SPE', 'ECO'].includes(ext) ? ext as any : 'unknown'
       files.value.push({
         name: file.name,
         type: fileType,
         content,
-        lines,
+        lines: content.split(/\r?\n/).filter(l => l.trim()),
         parsed: fileType !== 'unknown',
         error: fileType === 'unknown' ? '不支持的文件格式' : undefined,
       })
     }
   }
-}
-
-/** 读取文件为文本 */
-function readFileAsText(file: File): Promise<string> {
-  return new Promise((resolve) => {
-    const reader = new FileReader()
-    reader.onload = (e) => resolve(e.target?.result as string || '')
-    reader.onerror = () => resolve('')
-    reader.readAsText(file)
-  })
 }
 
 /* 处理拖放（覆盖默认行为） */
@@ -273,7 +180,7 @@ function handleExportConfig() {
             <FolderOpen :size="32" class="mx-auto mb-2 text-midnight-400" />
             <p class="text-sm text-midnight-300">拖放文件到此处，或点击选择</p>
             <p class="text-xs text-midnight-400 mt-1">
-              支持 .WTH .SOL .CUL .SPE .ECO .JSON 格式
+              支持 .WTH .SOL .CUL .SPE .ECO .JSON .xlsx .xls 格式
             </p>
             <input
               ref="fileInput"
@@ -338,6 +245,10 @@ function handleExportConfig() {
           <button class="strawberry-btn flex items-center gap-2" @click="handleExportConfig">
             <Download :size="14" />
             导出当前配置
+          </button>
+          <button class="ghost-btn flex items-center gap-2 text-sm mt-3" @click="downloadWeatherTemplate">
+            <Download :size="14" />
+            下载气象数据模板
           </button>
         </div>
 
