@@ -151,6 +151,7 @@ const currentPageTitle = computed(() => {
     <!-- 手册抽屉 -->
     <ManualDrawer
       v-if="showManual"
+      :visible="showManual"
       version="v1"
       @close="showManual = false"
     />

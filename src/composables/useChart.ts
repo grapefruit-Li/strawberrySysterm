@@ -1,15 +1,13 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { LineChart, BarChart, ScatterChart, CustomChart, PieChart } from 'echarts/charts'
+import { LineChart, BarChart, ScatterChart, PieChart } from 'echarts/charts'
 import {
   TitleComponent,
   TooltipComponent,
   LegendComponent,
   GridComponent,
   DataZoomComponent,
-  MarkLineComponent,
-  MarkPointComponent,
 } from 'echarts/components'
 
 /* 注册 ECharts 组件 */
@@ -18,22 +16,19 @@ use([
   LineChart,
   BarChart,
   ScatterChart,
-  CustomChart,
   PieChart,
   TitleComponent,
   TooltipComponent,
   LegendComponent,
   GridComponent,
   DataZoomComponent,
-  MarkLineComponent,
-  MarkPointComponent,
 ])
 
-/* 统一深色主题配置 */
-const darkTheme = {
+/* 图表主题配置 */
+const chartTheme = {
   backgroundColor: 'transparent',
   textStyle: {
-    color: '#D1D5DB',
+    color: '#9CA3AF',
     fontFamily: 'DM Sans, sans-serif',
   },
   title: {
@@ -44,44 +39,17 @@ const darkTheme = {
   },
 }
 
-/* 创建图表选项 */
+/* 创建通用图表选项 */
 export function useChart() {
-  /* 颜色序列 */
-  const colors = {
-    strawberry: '#E63946',
-    forest: '#2D6A4F',
-    blue: '#3B82F6',
-    amber: '#F59E0B',
-    purple: '#8B5CF6',
-    cyan: '#06B6D4',
-    pink: '#EC4899',
-  }
-
-  /* 阶段颜色映射 */
-  const stageColors: Record<string, string> = {
-    '萌芽期': '#4ADE80',
-    '出苗期': '#4ADE80',
-    '营养生长期': '#2D6A4F',
-    '花芽分化期': '#F59E0B',
-    '开花期': '#EC4899',
-    '结果期': '#E63946',
-    '果实膨大期': '#E63946',
-    '成熟期': '#8B5CF6',
-    '采收期': '#E63946',
-  }
-
-  /* 风险等级颜色映射 */
-  const riskColors: Record<string, string> = {
-    low: '#4ADE80',
-    medium: '#F59E0B',
-    high: '#F97316',
-    critical: '#E63946',
-  }
-
-  /* 深色基础选项 */
+  /* 基础暗色主题选项 */
   const baseOption = {
-    ...darkTheme,
-    grid: { left: 60, right: 30, top: 40, bottom: 50 },
+    ...chartTheme,
+    grid: {
+      left: 60,
+      right: 30,
+      top: 40,
+      bottom: 50,
+    },
     tooltip: {
       trigger: 'axis' as const,
       backgroundColor: 'rgba(26, 27, 46, 0.9)',
@@ -102,12 +70,29 @@ export function useChart() {
       type: 'value' as const,
       axisLine: { lineStyle: { color: '#374151' } },
       axisLabel: { color: '#9CA3AF' },
-      splitLine: { lineStyle: { color: 'rgba(55, 65, 81, 0.4)' } },
+      splitLine: { lineStyle: { color: 'rgba(55, 65, 81, 0.5)' } },
     },
-    dataZoom: [{ type: 'inside' as const, start: 0, end: 100 }],
+    dataZoom: [
+      {
+        type: 'inside' as const,
+        start: 0,
+        end: 100,
+      },
+    ],
   }
 
-  /* ===== 折线图 ===== */
+  /* 颜色序列 */
+  const colors = {
+    strawberry: '#E63946',
+    forest: '#2D6A4F',
+    blue: '#3B82F6',
+    amber: '#F59E0B',
+    purple: '#8B5CF6',
+    cyan: '#06B6D4',
+    pink: '#EC4899',
+  }
+
+  /* 创建折线图选项 */
   function createLineChartOption(
     title: string,
     xData: string[],
@@ -115,16 +100,13 @@ export function useChart() {
   ) {
     return {
       ...baseOption,
-      title: { show: false },
+      title: { text: title, left: 'center' },
       xAxis: { ...baseOption.xAxis, data: xData },
-      legend: { ...baseOption.legend, bottom: 0, left: 'center' },
-      grid: { ...baseOption.grid, bottom: 80 },
       series: series.map((s, i) => ({
         name: s.name,
         type: 'line' as const,
         data: s.data,
         smooth: true,
-        symbol: 'none',
         lineStyle: { width: 2 },
         itemStyle: { color: s.color || Object.values(colors)[i % 7] },
         areaStyle: i === 0 ? {
@@ -141,7 +123,7 @@ export function useChart() {
     }
   }
 
-  /* ===== 柱状图 ===== */
+  /* 创建柱状图选项 */
   function createBarChartOption(
     title: string,
     xData: string[],
@@ -149,10 +131,8 @@ export function useChart() {
   ) {
     return {
       ...baseOption,
-      title: { show: false },
+      title: { text: title, left: 'center' },
       xAxis: { ...baseOption.xAxis, data: xData },
-      legend: { ...baseOption.legend, bottom: 0, left: 'center' },
-      grid: { ...baseOption.grid, bottom: 80 },
       series: series.map((s, i) => ({
         name: s.name,
         type: 'bar' as const,
@@ -166,17 +146,15 @@ export function useChart() {
     }
   }
 
-  /* ===== 散点图 ===== */
+  /* 创建散点图选项 */
   function createScatterChartOption(
     title: string,
     series: { name: string; data: [number, number][]; color?: string }[]
   ) {
     return {
       ...baseOption,
-      title: { show: false },
+      title: { text: title, left: 'center' },
       xAxis: { ...baseOption.xAxis, type: 'value' as const },
-      legend: { ...baseOption.legend, bottom: 0, left: 'center' },
-      grid: { ...baseOption.grid, bottom: 80 },
       series: series.map((s, i) => ({
         name: s.name,
         type: 'scatter' as const,
@@ -187,372 +165,216 @@ export function useChart() {
     }
   }
 
-  /* ===== 甘特图时间轴 ===== */
-  function ganttTimelineOption(events: import('@/engine/types').PhenologyEvent[]) {
-    if (events.length === 0) {
-      return { ...baseOption, title: { show: false }, xAxis: { ...baseOption.xAxis, data: [] }, series: [] }
-    }
-
-    function formatDate(dateNum: number): string {
-      const s = String(dateNum)
-      return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`
-    }
-
-    const categories = events.map(e => e.name)
-    const startDates = events.map(e => formatDate(e.startDate))
-    const endDates = events.map(e => {
-      const startDate = new Date(
-        Math.floor(e.startDate / 10000),
-        Math.floor((e.startDate % 10000) / 100) - 1,
-        e.startDate % 100
-      )
-      const endDate = new Date(startDate.getTime() + e.duration * 86400000)
-      return `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`
-    })
-
+  /* 病虫害风险指数图表 */
+  function riskIndexOption(_pestRisks?: any[]) {
     return {
-      ...baseOption,
-      title: { show: false },
-      tooltip: {
-        trigger: 'axis' as const,
-        backgroundColor: 'rgba(26, 27, 46, 0.9)',
-        borderColor: 'rgba(45, 49, 66, 0.5)',
-        textStyle: { color: '#F3F4F6' },
-        formatter: (params: any) => {
-          const idx = params[0]?.dataIndex ?? 0
-          const ev = events[idx]
-          if (!ev) return ''
-          return `<strong>${ev.name}</strong><br/>` +
-            `预测日期: ${formatDate(ev.startDate)}<br/>` +
-            `持续: ${ev.duration}天<br/>` +
-            `累积GDD: ${ev.endGdd} °C·d<br/>` +
-            `置信度: ${(0.85 * 100).toFixed(0)}%`
-        },
+    ...chartTheme,
+    grid: { left: 50, right: 20, top: 40, bottom: 40 },
+    tooltip: {
+      trigger: 'axis' as const,
+      backgroundColor: 'rgba(26, 27, 46, 0.9)',
+      borderColor: 'rgba(45, 49, 66, 0.5)',
+      textStyle: { color: '#F3F4F6' },
+    },
+    legend: {
+      data: ['灰霉病', '蚜虫', '红蜘蛛', '白粉病'],
+      textStyle: { color: '#9CA3AF' },
+      top: 5,
+    },
+    xAxis: {
+      type: 'category' as const,
+      data: ['10月', '11月', '12月', '1月', '2月', '3月'],
+      axisLine: { lineStyle: { color: '#374151' } },
+      axisLabel: { color: '#9CA3AF' },
+    },
+    yAxis: {
+      type: 'value' as const,
+      name: '风险指数',
+      nameTextStyle: { color: '#9CA3AF' },
+      max: 100,
+      axisLine: { lineStyle: { color: '#374151' } },
+      axisLabel: { color: '#9CA3AF' },
+      splitLine: { lineStyle: { color: 'rgba(55, 65, 81, 0.5)' } },
+    },
+    series: [
+      {
+        name: '灰霉病',
+        type: 'bar',
+        data: [30, 65, 85, 70, 40, 20],
+        itemStyle: { color: '#8B5CF6', borderRadius: [3, 3, 0, 0] },
+        barMaxWidth: 20,
       },
-      grid: { left: 120, right: 30, top: 40, bottom: 50 },
-      xAxis: {
-        type: 'time' as const,
-        axisLine: { lineStyle: { color: '#374151' } },
-        axisLabel: { color: '#9CA3AF', formatter: '{MM}-{dd}' },
-        splitLine: { lineStyle: { color: 'rgba(55, 65, 81, 0.3)' } },
+      {
+        name: '蚜虫',
+        type: 'bar',
+        data: [20, 40, 30, 25, 55, 70],
+        itemStyle: { color: '#F97316', borderRadius: [3, 3, 0, 0] },
+        barMaxWidth: 20,
       },
-      yAxis: {
-        type: 'category' as const,
-        data: categories,
-        axisLine: { lineStyle: { color: '#374151' } },
-        axisLabel: { color: '#9CA3AF', fontSize: 12 },
+      {
+        name: '红蜘蛛',
+        type: 'bar',
+        data: [15, 25, 20, 15, 45, 60],
+        itemStyle: { color: '#22C55E', borderRadius: [3, 3, 0, 0] },
+        barMaxWidth: 20,
       },
-      series: events.map((ev, i) => ({
-        name: ev.name,
-        type: 'custom' as const,
-        renderItem: (_params: any, api: any) => {
-          const categoryIndex = api.value(0)
-          const start = api.coord([api.value(1), categoryIndex])
-          const end = api.coord([api.value(2), categoryIndex])
-          const height = api.size([0, 1])[1] * 0.6
-          const rectShape = {
-            x: start[0],
-            y: start[1] - height / 2,
-            width: end[0] - start[0],
-            height,
-          }
-          return {
-            type: 'rect',
-            transition: ['shape'],
-            shape: rectShape,
-            style: {
-              fill: stageColors[ev.name] || Object.values(colors)[i % 7],
-              opacity: 0.85,
-            },
-          }
-        },
-        encode: {
-          x: [1, 2],
-          y: 0,
-        },
-        data: [[i, startDates[i], endDates[i]]],
-      })),
+      {
+        name: '白粉病',
+        type: 'bar',
+        data: [10, 35, 50, 45, 60, 40],
+        itemStyle: { color: '#EC4899', borderRadius: [3, 3, 0, 0] },
+        barMaxWidth: 20,
+      },
+    ],
     }
   }
 
-  /* ===== 风险指数折线图 ===== */
-  function riskIndexOption(pestRisks: import('@/engine/types').PestRiskRecord[]) {
-    if (pestRisks.length === 0) {
-      return { ...baseOption, title: { show: false }, xAxis: { ...baseOption.xAxis, data: [] }, series: [] }
-    }
-
-    const allDates = [...new Set(pestRisks.map(p => String(p.dailyRiskIndex[0].date)))].sort()
-
-    const riskLevelValue = (level: string) => {
-      switch (level) {
-        case 'critical': return 100
-        case 'high': return 75
-        case 'medium': return 50
-        case 'low': return 25
-        default: return 0
-      }
-    }
-
+  /* 产量预测折线图 */
+  function yieldCurveOption(_dailyOutputs?: any[], _harvests?: any[]) {
     return {
-      ...baseOption,
-      title: { show: false },
-      legend: {
-        ...baseOption.legend,
-        bottom: 0,
-        left: 'center',
-      },
-      grid: { left: 60, right: 30, top: 60, bottom: 80 },
-      xAxis: { ...baseOption.xAxis, data: allDates },
-      yAxis: {
-        ...baseOption.yAxis,
-        name: '风险等级',
-        max: 100,
-      },
-      series: pestRisks.map((p, i) => ({
-        name: p.name,
-        type: 'line' as const,
-        data: allDates.map(date => date === String(p.dailyRiskIndex[0].date) ? riskLevelValue(p.riskLevel) : null),
+    ...chartTheme,
+    grid: { left: 60, right: 30, top: 40, bottom: 50 },
+    tooltip: {
+      trigger: 'axis' as const,
+      backgroundColor: 'rgba(26, 27, 46, 0.9)',
+      borderColor: 'rgba(45, 49, 66, 0.5)',
+      textStyle: { color: '#F3F4F6' },
+    },
+    xAxis: {
+      type: 'category' as const,
+      data: Array.from({ length: 30 }, (_, i) => `第${i + 1}周`),
+      axisLine: { lineStyle: { color: '#374151' } },
+      axisLabel: { color: '#9CA3AF', interval: 4 },
+    },
+    yAxis: {
+      type: 'value' as const,
+      name: '产量 (kg/ha)',
+      nameTextStyle: { color: '#9CA3AF' },
+      axisLine: { lineStyle: { color: '#374151' } },
+      axisLabel: { color: '#9CA3AF' },
+      splitLine: { lineStyle: { color: 'rgba(55, 65, 81, 0.5)' } },
+    },
+    series: [
+      {
+        name: '预测产量',
+        type: 'line',
         smooth: true,
-        symbol: 'none',
-        lineStyle: { width: 2 },
-        itemStyle: { color: riskColors[p.riskLevel] || Object.values(colors)[i % 7] },
-        connectNulls: true,
-      })),
+        data: [
+          0, 0, 0, 0, 0, 0, 0, 0, 50, 120,
+          250, 400, 580, 750, 900, 1050, 1180, 1280, 1350, 1400,
+          1420, 1380, 1300, 1200, 1080, 950, 800, 650, 500, 350,
+        ],
+        lineStyle: { width: 2, color: '#22C55E' },
+        itemStyle: { color: '#22C55E' },
+        areaStyle: {
+          color: {
+            type: 'linear' as const,
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(34, 197, 94, 0.3)' },
+              { offset: 1, color: 'rgba(34, 197, 94, 0.02)' },
+            ],
+          },
+        },
+      },
+    ],
     }
   }
 
-  /* ===== 逐日产量曲线 ===== */
-  function yieldCurveOption(
-    dailyOutputs: import('@/engine/types').DailyOutput[],
-    harvests: import('@/engine/types').HarvestRecord[]
-  ) {
-    if (dailyOutputs.length === 0) {
-      return { ...baseOption, title: { show: false }, xAxis: { ...baseOption.xAxis, data: [] }, series: [] }
-    }
-
-    function formatDate(dateNum: number): string {
-      const s = String(dateNum)
-      return `${s.slice(4, 6)}-${s.slice(6, 8)}`
-    }
-
-    const dates = dailyOutputs.map(d => formatDate(d.day))
-    const dailyYield = dailyOutputs.map(d => d.fruitWt > 0 ? Math.round(d.fruitWt * 0.12 * 10) / 10 : 0)
-
-    let cumYield = 0
-    const cumulativeYield = dailyYield.map(y => {
-      cumYield += y
-      return Math.round(cumYield * 10) / 10
-    })
-
+  /* 第一/二茬占比环形图 */
+  function donutChartOption(data?: { name: string; value: number; color: string }[]) {
     return {
-      ...baseOption,
-      title: { show: false },
-      legend: { ...baseOption.legend, bottom: 0, left: 'center' },
-      grid: { left: 60, right: 60, top: 60, bottom: 80 },
-      xAxis: { ...baseOption.xAxis, data: dates },
-      yAxis: [
-        {
-          type: 'value' as const,
-          name: '日产量 (kg/ha)',
-          axisLine: { lineStyle: { color: '#374151' } },
-          axisLabel: { color: '#9CA3AF' },
-          splitLine: { lineStyle: { color: 'rgba(55, 65, 81, 0.4)' } },
+    ...chartTheme,
+    tooltip: {
+      trigger: 'item' as const,
+      backgroundColor: 'rgba(26, 27, 46, 0.9)',
+      borderColor: 'rgba(45, 49, 66, 0.5)',
+      textStyle: { color: '#F3F4F6' },
+    },
+    legend: {
+      orient: 'horizontal' as const,
+      bottom: 10,
+      textStyle: { color: '#9CA3AF' },
+    },
+    series: [
+      {
+        name: '产量占比',
+        type: 'pie',
+        radius: ['45%', '70%'],
+        center: ['50%', '45%'],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 6,
+          borderColor: '#242b3d',
+          borderWidth: 2,
         },
-        {
-          type: 'value' as const,
-          name: '累积产量 (kg/ha)',
-          axisLine: { lineStyle: { color: '#374151' } },
-          axisLabel: { color: '#9CA3AF' },
-          splitLine: { show: false },
+        label: {
+          show: true,
+          color: '#e6edf3',
+          formatter: '{b}\n{d}%',
         },
-      ],
-      series: [
-        {
-          name: '日产量',
-          type: 'line' as const,
-          data: dailyYield,
-          smooth: true,
-          symbol: 'none',
-          lineStyle: { width: 2, color: '#EF4444' },
-          itemStyle: { color: '#EF4444' },
-          areaStyle: {
-            color: {
-              type: 'linear' as const,
-              x: 0, y: 0, x2: 0, y2: 1,
-              colorStops: [
-                { offset: 0, color: '#EF444430' },
-                { offset: 1, color: '#EF444405' },
-              ],
-            },
-          },
-        },
-        {
-          name: '累积产量',
-          type: 'line' as const,
-          yAxisIndex: 1,
-          data: cumulativeYield,
-          smooth: true,
-          symbol: 'none',
-          lineStyle: { width: 2, color: colors.forest },
-          itemStyle: { color: colors.forest },
-          areaStyle: {
-            color: {
-              type: 'linear' as const,
-              x: 0, y: 0, x2: 0, y2: 1,
-              colorStops: [
-                { offset: 0, color: colors.forest + '30' },
-                { offset: 1, color: colors.forest + '05' },
-              ],
-            },
-          },
-        },
-      ],
+        data: data && data.length > 0
+          ? data.map(d => ({ value: d.value, name: d.name, itemStyle: { color: d.color } }))
+          : [
+              { value: 62, name: '第一茬果', itemStyle: { color: '#22C55E' } },
+              { value: 38, name: '第二茬果', itemStyle: { color: '#3B82F6' } },
+            ],
+      },
+    ],
     }
   }
 
-  /* ===== 品质散点图 ===== */
-  function qualityScatterOption(harvests: import('@/engine/types').HarvestRecord[]) {
-    if (harvests.length === 0) {
-      return { ...baseOption, title: { show: false }, xAxis: { ...baseOption.xAxis, data: [] }, series: [] }
-    }
-
-    function formatDate(dateNum: number): string {
-      const s = String(dateNum)
-      return `${s.slice(4, 6)}-${s.slice(6, 8)}`
-    }
-
+  /* 甘特图时间轴选项 */
+  function ganttTimelineOption(_events?: any[]) {
     return {
-      ...baseOption,
-      title: { show: false },
-      legend: { ...baseOption.legend, bottom: 0, left: 'center' },
-      grid: { left: 60, right: 30, top: 60, bottom: 80 },
-      xAxis: {
-        type: 'category' as const,
-        data: harvests.map(h => formatDate(h.date)),
-        axisLine: { lineStyle: { color: '#374151' } },
-        axisLabel: { color: '#9CA3AF' },
-        splitLine: { show: false },
+    ...chartTheme,
+    grid: { left: 100, right: 30, top: 20, bottom: 30 },
+    tooltip: {
+      trigger: 'axis' as const,
+      backgroundColor: 'rgba(26, 27, 46, 0.9)',
+      borderColor: 'rgba(45, 49, 66, 0.5)',
+      textStyle: { color: '#F3F4F6' },
+    },
+    xAxis: {
+      type: 'category' as const,
+      data: ['10月', '11月', '12月', '1月', '2月', '3月'],
+      axisLine: { lineStyle: { color: '#374151' } },
+      axisLabel: { color: '#9CA3AF' },
+    },
+    yAxis: {
+      type: 'category' as const,
+      data: ['采收', '果实膨大', '开花', '营养生长', '定植'],
+      axisLine: { lineStyle: { color: '#374151' } },
+      axisLabel: { color: '#9CA3AF' },
+    },
+    series: [
+      {
+        type: 'bar',
+        stack: 'total',
+        data: [
+          { value: 3, itemStyle: { color: '#78716c' } },
+          { value: 3, itemStyle: { color: '#ef4444' } },
+          { value: 2, itemStyle: { color: '#f97316' } },
+          { value: 2, itemStyle: { color: '#22c55e' } },
+          { value: 1, itemStyle: { color: '#4ade80' } },
+        ],
+        barWidth: 20,
+        itemStyle: { borderRadius: 4 },
       },
-      yAxis: [
-        {
-          type: 'value' as const,
-          name: 'SSC (%)',
-          axisLine: { lineStyle: { color: '#374151' } },
-          axisLabel: { color: '#9CA3AF' },
-          splitLine: { lineStyle: { color: 'rgba(55, 65, 81, 0.4)' } },
-        },
-        {
-          type: 'value' as const,
-          name: '硬度 (N)',
-          axisLine: { lineStyle: { color: '#374151' } },
-          axisLabel: { color: '#9CA3AF' },
-          splitLine: { show: false },
-        },
-      ],
-      series: [
-        {
-          name: 'SSC',
-          type: 'scatter' as const,
-          data: harvests.map(h => h.ssc),
-          symbolSize: 10,
-          itemStyle: { color: colors.strawberry },
-        },
-        {
-          name: '酸度',
-          type: 'scatter' as const,
-          data: harvests.map(h => h.acidity),
-          symbolSize: 10,
-          itemStyle: { color: colors.amber },
-        },
-        {
-          name: '硬度',
-          type: 'scatter' as const,
-          yAxisIndex: 1,
-          data: harvests.map(h => h.firmness),
-          symbolSize: 10,
-          itemStyle: { color: colors.forest },
-        },
-      ],
-    }
-  }
-
-  /* ===== 环形图 ===== */
-  function donutChartOption(data: { name: string; value: number; color: string }[]) {
-    return {
-      ...darkTheme,
-      title: { show: false },
-      tooltip: {
-        trigger: 'item' as const,
-        backgroundColor: 'rgba(26, 27, 46, 0.9)',
-        borderColor: 'rgba(45, 49, 66, 0.5)',
-        textStyle: { color: '#F3F4F6' },
-      },
-      legend: {
-        bottom: 0,
-        left: 'center',
-        textStyle: { color: '#9CA3AF' },
-      },
-      series: [
-        {
-          name: '产量比例',
-          type: 'pie' as const,
-          radius: ['40%', '70%'],
-          center: ['50%', '50%'],
-          avoidLabelOverlap: false,
-          itemStyle: {
-            borderRadius: 6,
-            borderColor: 'rgba(26, 27, 46, 0.8)',
-            borderWidth: 2,
-          },
-          label: {
-            show: true,
-            position: 'outside' as const,
-            formatter: '{b}\n{c} t/ha\n{d}%',
-            color: '#D1D5DB',
-          },
-          labelLine: {
-            show: true,
-            lineStyle: { color: '#4B5563' },
-          },
-          emphasis: {
-            label: {
-              show: true,
-              fontSize: 14,
-              fontWeight: 'bold',
-              color: '#F3F4F6',
-            },
-          },
-          data: data.map(d => ({
-            name: d.name,
-            value: d.value,
-            itemStyle: { color: d.color },
-          })),
-        },
-      ],
+    ],
     }
   }
 
   return {
     baseOption,
     colors,
-    stageColors,
-    riskColors,
-    chartTheme: darkTheme,
-    lightChartTheme: darkTheme,
-    createLightBaseOption: () => baseOption,
+    chartTheme,
     createLineChartOption,
     createBarChartOption,
     createScatterChartOption,
-    createLightLineChartOption: createLineChartOption,
-    createLightBarChartOption: createBarChartOption,
-    createLightScatterChartOption: createScatterChartOption,
-    ganttTimelineOption,
-    ganttTimelineLightOption: ganttTimelineOption,
     riskIndexOption,
-    riskIndexLightOption: riskIndexOption,
     yieldCurveOption,
-    yieldCurveLightOption: yieldCurveOption,
-    qualityScatterOption,
     donutChartOption,
+    ganttTimelineOption,
   }
 }

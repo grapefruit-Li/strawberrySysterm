@@ -3,248 +3,243 @@ import { computed } from 'vue'
 import { useSimulationStore } from '@/stores/simulation'
 import { useConfigStore } from '@/stores/config'
 import { useChart } from '@/composables/useChart'
-import type { PestRiskRecord, RiskLevel } from '@/engine/types'
 import VChart from 'vue-echarts'
-import {
-  Shield,
-  Bug,
-  AlertTriangle,
-  Info,
-  Thermometer,
-  Wind,
-  CheckCircle2,
-  Eye,
-  SprayCan,
-  BookOpen,
-  ShieldCheck,
-  Calendar,
-} from 'lucide-vue-next'
 
-const simulation = useSimulationStore()
-const config = useConfigStore()
-const { riskIndexLightOption } = useChart()
+const simStore = useSimulationStore()
+const configStore = useConfigStore()
+const { riskIndexOption } = useChart()
 
-const pestRisks = computed<PestRiskRecord[]>(() => simulation.pestRisks)
+/* 风险卡片数据 */
+const pestRisks = [
+  {
+    emoji: '🍄',
+    name: '灰霉病',
+    topColor: '#8B5CF6',
+    highRiskPeriod: '11月-1月',
+    trigger: '低温高湿，相对湿度>85%',
+  },
+  {
+    emoji: '🐛',
+    name: '蚜虫',
+    topColor: 'var(--accent-orange)',
+    highRiskPeriod: '2月-3月',
+    trigger: '气温回升，新梢萌发期',
+  },
+  {
+    emoji: '🕷️',
+    name: '红蜘蛛',
+    topColor: 'var(--accent-green)',
+    highRiskPeriod: '2月-3月',
+    trigger: '干旱少雨，气温>20°C',
+  },
+  {
+    emoji: '🦠',
+    name: '白粉病',
+    topColor: '#EC4899',
+    highRiskPeriod: '1月-3月',
+    trigger: '昼夜温差大，通风不良',
+  },
+]
 
-/* 风险摘要卡片 */
-const riskSummary = computed(() => {
-  const risks = pestRisks.value
-  const highCount = risks.filter(r => r.riskLevel === 'high' || r.riskLevel === 'critical').length
-  const maxRiskLevel = risks.reduce<RiskLevel>((max, r) => {
-    const level = { low: 0, medium: 1, high: 2, critical: 3 }
-    return level[r.riskLevel] > level[max] ? r.riskLevel : max
-  }, 'low')
+/* 防治方案表格数据 */
+const controlPlans = [
+  { stage: '定植期', pest: '综合预防', measure: '种苗消毒，50%多菌灵800倍液浸根', method: '浸根', timing: '定植前1天' },
+  { stage: '营养生长期', pest: '蚜虫', measure: '10%吡虫啉可湿性粉剂2000倍液', method: '喷雾', timing: '发现即治' },
+  { stage: '花芽分化期', pest: '灰霉病', measure: '50%速克灵1500倍液', method: '喷雾', timing: '11月中旬预防' },
+  { stage: '开花期', pest: '灰霉病', measure: '降低湿度，通风换气', method: '农艺措施', timing: '持续' },
+  { stage: '结果期', pest: '红蜘蛛', measure: '1.8%阿维菌素3000倍液', method: '喷雾', timing: '2月初预防' },
+  { stage: '采收期', pest: '白粉病', measure: '25%三唑酮1500倍液', method: '喷雾', timing: '发病初期' },
+]
 
-  const levelMap: Record<string, { label: string; class: string }> = {
-    low: { label: '低风险', class: 'v2-accent-green' },
-    medium: { label: '中等风险', class: 'v2-accent-orange' },
-    high: { label: '高风险', class: 'v2-accent-red' },
-    critical: { label: '严重风险', class: 'v2-accent-purple' },
-  }
-
-  const info = levelMap[maxRiskLevel] || levelMap.low
-
-  return [
-    { label: '风险等级', value: info.label, sub: '综合评估', accent: info.class, icon: Shield },
-    { label: '高风险数', value: `${highCount}`, sub: `共 ${risks.length} 项`, accent: 'v2-accent-red', icon: AlertTriangle },
-    { label: '预警总数', value: `${risks.length}`, sub: '病虫害项', accent: 'v2-accent-blue', icon: Bug },
-  ]
-})
-
-/* 风险指数图配置 */
-const riskChartOption = computed(() => {
-  if (pestRisks.value.length === 0) {
-    return riskIndexLightOption([])
-  }
-  return riskIndexLightOption(pestRisks.value)
-})
-
-/* 风险徽章 */
-function riskBadge(level: PestRiskRecord['riskLevel']): { class: string; text: string } {
-  const map: Record<string, { class: string; text: string }> = {
-    low: { class: 'bg-green-100 text-green-700 border border-green-200', text: '低风险' },
-    medium: { class: 'bg-yellow-100 text-yellow-700 border border-yellow-200', text: '中等风险' },
-    high: { class: 'bg-orange-100 text-orange-700 border border-orange-200', text: '高风险' },
-    critical: { class: 'bg-red-100 text-red-700 border border-red-200', text: '严重风险' },
-  }
-  return map[level] || map.low
-}
-
-/* 阶段名称 */
-function stageName(stageName: string): string {
-  return stageName
-}
+/* IPM核心原则 */
+const ipmPrinciples = [
+  {
+    num: 1,
+    title: '预防为主',
+    desc: '优先采用农业防治和物理防治，创造不利于病虫害发生的环境条件',
+  },
+  {
+    num: 2,
+    title: '综合防治',
+    desc: '协调运用农业、物理、生物和化学防治手段，减少单一依赖化学农药',
+  },
+  {
+    num: 3,
+    title: '精准施药',
+    desc: '基于监测预警数据，在最佳防治窗口期精准施药，提高防治效果',
+  },
+  {
+    num: 4,
+    title: '安全间隔',
+    desc: '严格遵守农药安全间隔期，确保采收时农药残留符合标准',
+  },
+]
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- 无数据提示 -->
-    <div
-      v-if="simulation.status === 'idle'"
-      class="v2-card p-12 text-center"
-    >
-      <Shield :size="48" class="mx-auto text-midnight-400 mb-4" />
-      <h3 class="text-xl text-midnight-300 mb-2">尚未运行模拟</h3>
-      <p class="text-midnight-300">请先在基础信息页面完成配置并生成方案</p>
+  <div class="pest-page">
+    <!-- 页面标题 -->
+    <div style="margin-bottom: 24px">
+      <h1 class="page-title">植保 IPM</h1>
+      <p class="page-subtitle">基于物候期的综合病虫害防治方案 · 112天风险期</p>
     </div>
 
-    <template v-else>
-      <!-- 风险摘要卡片 -->
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+    <!-- 4个风险卡片 -->
+    <div class="risk-cards-row">
+      <div
+        v-for="risk in pestRisks"
+        :key="risk.name"
+        class="risk-card"
+      >
+        <div class="risk-top" :style="{ backgroundColor: risk.topColor }"></div>
+        <div class="risk-body">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px">
+            <span style="font-size: 20px">{{ risk.emoji }}</span>
+            <span style="font-size: 14px; font-weight: 600; color: var(--text-primary)">{{ risk.name }}</span>
+          </div>
+          <div style="margin-bottom: 6px">
+            <span style="font-size: 11px; color: var(--text-muted)">高风险期：</span>
+            <span style="font-size: 13px; color: var(--accent-orange); font-weight: 500">{{ risk.highRiskPeriod }}</span>
+          </div>
+          <div>
+            <span style="font-size: 11px; color: var(--text-muted)">触发条件：</span>
+            <span style="font-size: 12px; color: var(--text-secondary)">{{ risk.trigger }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 月度风险指数图表 -->
+    <div class="section-block">
+      <h2 class="section-title">月度风险指数</h2>
+      <VChart :option="riskIndexOption" class="echarts-container" style="height: 320px" />
+    </div>
+
+    <!-- 防治方案表格 -->
+    <div class="section-block">
+      <h2 class="section-title">防治方案</h2>
+      <div style="overflow-x: auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>生育阶段</th>
+              <th>目标病虫害</th>
+              <th>防治措施</th>
+              <th>施药方式</th>
+              <th>时机</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="plan in controlPlans" :key="plan.stage + plan.pest">
+              <td>{{ plan.stage }}</td>
+              <td>{{ plan.pest }}</td>
+              <td>{{ plan.measure }}</td>
+              <td>{{ plan.method }}</td>
+              <td>{{ plan.timing }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- IPM核心原则 -->
+    <div class="section-block">
+      <h2 class="section-title">IPM 核心原则</h2>
+      <div class="principles-grid">
         <div
-          v-for="(card, idx) in riskSummary"
-          :key="card.label"
-          class="v2-stat-card"
+          v-for="principle in ipmPrinciples"
+          :key="principle.num"
+          class="principle-item"
         >
-          <div :class="['absolute top-0 left-0 right-0 h-1', card.accent]"></div>
-          <div class="flex items-center gap-2 mb-1">
-            <component :is="card.icon" :size="14" class="text-midnight-300" />
-            <span class="text-xs text-midnight-300 uppercase tracking-wider">{{ card.label }}</span>
-          </div>
-          <span class="text-2xl font-bold text-midnight-100">{{ card.value }}</span>
-          <span class="text-xs text-midnight-400 mt-1">{{ card.sub }}</span>
-        </div>
-      </div>
-
-      <!-- 风险指数图 -->
-      <div class="v2-card p-5">
-        <h2 class="v2-section-title flex items-center gap-2">
-          <Bug :size="18" class="text-orange-500" />
-          风险预警指数
-        </h2>
-        <v-chart
-          :option="riskChartOption"
-          autoresize
-          class="w-full h-72"
-        />
-      </div>
-
-      <!-- 病虫害预警卡片 + IPM策略面板 -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- 病虫害预警卡片 -->
-        <div class="lg:col-span-2 v2-card p-5">
-          <h2 class="v2-section-title flex items-center gap-2">
-            <AlertTriangle :size="18" class="text-red-500" />
-            病虫害预警
-          </h2>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div
-              v-for="(risk, idx) in pestRisks"
-              :key="risk.name + idx"
-              class="p-4 rounded-lg border-2"
-              :class="risk.riskLevel === 'critical'
-                ? 'border-red-300 bg-red-50/50'
-                : risk.riskLevel === 'high'
-                  ? 'border-orange-300 bg-orange-50/50'
-                  : 'border-gray-200 bg-white'"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center gap-2">
-                  <Bug :size="16" class="text-midnight-300" />
-                  <span class="font-medium text-midnight-100">{{ risk.name }}</span>
-                </div>
-                <span
-                  class="text-xs px-2 py-0.5 rounded-full"
-                  :class="riskBadge(risk.riskLevel).class"
-                >
-                  {{ riskBadge(risk.riskLevel).text }}
-                </span>
-              </div>
-
-              <p class="text-xs text-midnight-300 mb-3">{{ risk.description }}</p>
-
-              <div class="space-y-1 text-xs text-midnight-300">
-                <div class="flex items-center gap-2">
-                  <Thermometer :size="12" />
-                  <span>适宜温度: {{ risk.dailyRiskIndex[0]?.index || '-' }}°C</span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <Wind :size="12" />
-                  <span>风险指数: {{ risk.riskIndex }}</span>
-                </div>
-              </div>
-
-              <div class="mt-3 pt-3 border-t border-gray-200">
-                <div class="flex items-center gap-2 text-xs text-midnight-300 mb-1">
-                  <span>关联阶段: {{ stageName(risk.relatedStage) }}</span>
-                </div>
-                <div class="flex items-center gap-2 text-xs text-midnight-300">
-                  <span>下次预警: {{ risk.nextAlertDate }}</span>
-                </div>
-              </div>
-
-              <div class="mt-3 p-2 rounded bg-midnight-700/30">
-                <div class="text-xs font-medium text-midnight-200 mb-1">防治建议</div>
-                <p class="text-xs text-midnight-300">{{ risk.controlRecommendation }}</p>
-              </div>
+          <div class="principle-num">{{ principle.num }}</div>
+          <div class="principle-content">
+            <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px">
+              {{ principle.title }}
             </div>
-
-            <div
-              v-if="pestRisks.length === 0"
-              class="col-span-full text-center py-8 text-midnight-400 text-sm"
-            >
-              暂无病虫害风险
-            </div>
-          </div>
-        </div>
-
-        <!-- IPM策略面板 -->
-        <div class="space-y-4">
-          <div class="v2-card p-5">
-            <h2 class="v2-section-title flex items-center gap-2">
-              <ShieldCheck :size="18" class="text-green-500" />
-              IPM策略
-            </h2>
-            <div class="space-y-3">
-              <div class="flex items-start gap-3 p-3 rounded-lg bg-green-50">
-                <CheckCircle2 :size="16" class="text-green-500 shrink-0 mt-0.5" />
-                <div>
-                  <div class="text-sm font-medium text-green-800">预防为主</div>
-                  <p class="text-xs text-green-600 mt-1">优先采用农业措施和物理防控</p>
-                </div>
-              </div>
-              <div class="flex items-start gap-3 p-3 rounded-lg bg-blue-50">
-                <Eye :size="16" class="text-blue-500 shrink-0 mt-0.5" />
-                <div>
-                  <div class="text-sm font-medium text-blue-800">监测预警</div>
-                  <p class="text-xs text-blue-600 mt-1">定期巡查，早发现早处理</p>
-                </div>
-              </div>
-              <div class="flex items-start gap-3 p-3 rounded-lg bg-orange-50">
-                <SprayCan :size="16" class="text-orange-500 shrink-0 mt-0.5" />
-                <div>
-                  <div class="text-sm font-medium text-orange-800">综合防治</div>
-                  <p class="text-xs text-orange-600 mt-1">生物、化学、物理方法结合</p>
-                </div>
-              </div>
-              <div class="flex items-start gap-3 p-3 rounded-lg bg-purple-50">
-                <BookOpen :size="16" class="text-purple-500 shrink-0 mt-0.5" />
-                <div>
-                  <div class="text-sm font-medium text-purple-800">安全间隔</div>
-                  <p class="text-xs text-purple-600 mt-1">遵守农药安全使用规范</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 防治日历 -->
-          <div class="v2-card p-5">
-            <h2 class="v2-section-title flex items-center gap-2">
-              <Calendar :size="18" class="text-blue-500" />
-              防治日历
-            </h2>
-            <div class="space-y-2 text-sm">
-              <div v-for="(risk, idx) in pestRisks.slice(0, 4)" :key="idx" class="flex items-center justify-between py-1">
-                <span class="text-midnight-200">{{ risk.name }}</span>
-                <span class="text-midnight-300 text-xs">{{ risk.nextAlertDate }}</span>
-              </div>
-              <div v-if="pestRisks.length === 0" class="text-center text-midnight-400 text-xs py-4">
-                暂无防治安排
-              </div>
+            <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.6">
+              {{ principle.desc }}
             </div>
           </div>
         </div>
       </div>
-    </template>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.pest-page {
+  max-width: 1100px;
+}
+
+/* 风险卡片行 */
+.risk-cards-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.risk-card {
+  flex: 1;
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.risk-card:hover {
+  border-color: var(--border-light);
+  box-shadow: var(--shadow);
+}
+
+.risk-top {
+  height: 4px;
+}
+
+.risk-body {
+  padding: 16px;
+}
+
+/* 区块 */
+.section-block {
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+/* IPM原则网格 */
+.principles-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.principle-item {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
+
+.principle-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--highlight-bg);
+  color: var(--accent-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.principle-content {
+  flex: 1;
+}
+</style>
