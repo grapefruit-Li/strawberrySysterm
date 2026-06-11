@@ -249,7 +249,7 @@ const timelineSegments = computed(() => {
 
 <style scoped>
 .phenology-page {
-  max-width: 1100px;
+  max-width: 100%;
 }
 
 .page-header {

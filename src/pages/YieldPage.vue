@@ -197,7 +197,7 @@ const yieldDetails = computed(() => {
 
 <style scoped>
 .yield-page {
-  max-width: 1100px;
+  max-width: 100%;
 }
 
 .page-header {

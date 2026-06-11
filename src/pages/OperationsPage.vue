@@ -202,7 +202,7 @@ const irrigationFertilizerPlans = [
 
 <style scoped>
 .operations-page {
-  max-width: 1100px;
+  max-width: 100%;
 }
 
 .page-header {
