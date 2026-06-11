@@ -34,6 +34,49 @@ const router = createRouter({
       component: () => import('@/pages/DataPage.vue'),
       meta: { title: '数据管理' },
     },
+    /* V2 路由 */
+    {
+      path: '/v2',
+      component: () => import('@/components/layout/AppLayoutV2.vue'),
+      children: [
+        {
+          path: '',
+          name: 'v2-basic',
+          component: () => import('@/pages/BasicInfoPage.vue'),
+          meta: { title: '基础信息' },
+        },
+        {
+          path: 'basic',
+          name: 'v2-basic-full',
+          component: () => import('@/pages/BasicInfoPage.vue'),
+          meta: { title: '基础信息' },
+        },
+        {
+          path: 'phenology',
+          name: 'v2-phenology',
+          component: () => import('@/pages/PhenologyPage.vue'),
+          meta: { title: '物候方案' },
+        },
+        {
+          path: 'pest',
+          name: 'v2-pest',
+          component: () => import('@/pages/PestPage.vue'),
+          meta: { title: '植保IPM' },
+        },
+        {
+          path: 'operations',
+          name: 'v2-operations',
+          component: () => import('@/pages/OperationsPage.vue'),
+          meta: { title: '农事操作' },
+        },
+        {
+          path: 'yield',
+          name: 'v2-yield',
+          component: () => import('@/pages/YieldPage.vue'),
+          meta: { title: '产量预测' },
+        },
+      ],
+    },
   ],
 })
 
