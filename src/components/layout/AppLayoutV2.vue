@@ -9,7 +9,7 @@ const showManual = ref(false)
 
 /* 导航项配置 */
 const navItems = [
-  { path: '/v2/basic', label: '基础信息', icon: '📋' },
+  { path: '/v2', label: '基础信息', icon: '📋' },
   { path: '/v2/phenology', label: '物候方案', icon: '🌱' },
   { path: '/v2/yield', label: '产量预测', icon: '📊' },
   { path: '/v2/pest', label: '植保IPM', icon: '🛡️' },
