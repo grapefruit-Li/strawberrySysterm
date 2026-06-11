@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useSimulationStore } from '@/stores/simulation'
 import { useConfigStore } from '@/stores/config'
 import { useChart } from '@/composables/useChart'
@@ -10,120 +9,97 @@ const configStore = useConfigStore()
 const { yieldCurveOption, donutChartOption } = useChart()
 
 /* 指标卡片数据 */
-const metricCards = computed(() => [
-  {
-    emoji: '🏆',
-    label: '鲜果总产',
-    value: '32',
-    unit: 't/ha',
-    note: '基于品种潜力预估',
-    borderColor: 'var(--accent-green)',
-  },
-  {
-    emoji: '⚖️',
-    label: '单果重',
-    value: '22',
-    unit: 'g',
-    note: '平均鲜果重',
-    borderColor: 'var(--accent-blue)',
-  },
-  {
-    emoji: '📈',
-    label: '第一茬占比',
-    value: '62',
-    unit: '%',
-    note: '主产期产量占比',
-    borderColor: 'var(--accent-orange)',
-  },
-  {
-    emoji: '📅',
-    label: '采收天数',
-    value: '68',
-    unit: '天',
-    note: '1/2 - 3/10',
-    borderColor: '#8B5CF6',
-  },
-])
+const statCards = [
+  { emoji: '🍓', label: '鲜果总产', value: '32', unit: 't/ha', note: '≈ 7 g/株', borderClass: 'green-border' },
+  { emoji: '⚖️', label: '单果重', value: '22', unit: 'g', note: '一级果 ≥20g', borderClass: 'blue-border' },
+  { emoji: '📊', label: '第一茬占比', value: '60', unit: '%', note: '品质最佳期', borderClass: 'orange-border' },
+  { emoji: '📅', label: '采收天数', value: '80', unit: '天', note: '1/3 起', borderClass: 'purple-border' },
+]
+
+/* 环形图图例 */
+const donutLegends = [
+  { colorClass: 'red', label: '第一茬 19.2 t/ha (60%)' },
+  { colorClass: 'yellow', label: '第二茬 12.8 t/ha (40%)' },
+]
 
 /* 详细预测表格数据 */
 const yieldDetails = [
-  { period: '12月下旬', week: '第12周', yieldPerDay: 50, cumulative: 350, fruitWeight: 18, ssc: 8.5 },
-  { period: '1月上旬', week: '第14周', yieldPerDay: 120, cumulative: 1200, fruitWeight: 20, ssc: 9.0 },
-  { period: '1月中旬', week: '第16周', yieldPerDay: 250, cumulative: 3500, fruitWeight: 22, ssc: 9.5 },
-  { period: '1月下旬', week: '第18周', yieldPerDay: 400, cumulative: 6800, fruitWeight: 23, ssc: 10.0 },
-  { period: '2月上旬', week: '第20周', yieldPerDay: 580, cumulative: 11500, fruitWeight: 24, ssc: 10.2 },
-  { period: '2月中旬', week: '第22周', yieldPerDay: 750, cumulative: 17500, fruitWeight: 23, ssc: 10.5 },
-  { period: '2月下旬', week: '第24周', yieldPerDay: 900, cumulative: 24000, fruitWeight: 22, ssc: 10.8 },
-  { period: '3月上旬', week: '第26周', yieldPerDay: 700, cumulative: 29000, fruitWeight: 21, ssc: 11.0 },
-  { period: '3月中旬', week: '第28周', yieldPerDay: 450, cumulative: 32000, fruitWeight: 20, ssc: 11.2 },
+  { metric: '鲜果总产 (t/ha)', value: '32', note: '—' },
+  { metric: '单株产量 (g)', value: '624', note: '密度 4.3 株/m²' },
+  { metric: '单果重 (g)', value: '22', note: '商品果标准' },
+  { metric: '果数/株', value: '28', note: '—' },
+  { metric: '果数/m²', value: '122', note: '—' },
+  { metric: '第一茬果 (t/ha)', value: '19.2', note: '约60%' },
+  { metric: '第二茬果 (t/ha)', value: '12.8', note: '约40%' },
+  { metric: '第一茬起始', value: '1/3', note: '定植后95天' },
+  { metric: '采收高峰', value: '1/18~2/22', note: '日产量最大' },
 ]
 </script>
 
 <template>
   <div class="yield-page">
-    <!-- 页面标题 -->
-    <div style="margin-bottom: 24px">
-      <h1 class="page-title">🏆 产量预测</h1>
+    <div class="page-header">
+      <h2 class="page-title">🏆 产量预测</h2>
       <p class="page-subtitle">预估 32 t/ha · 基于品种潜力和环境条件的产量预估</p>
     </div>
 
-    <!-- 4个指标卡片 -->
-    <div class="metric-cards-row">
+    <!-- 4个指标卡片 flex一行 -->
+    <div class="yield-stats">
       <div
-        v-for="card in metricCards"
+        v-for="card in statCards"
         :key="card.label"
-        class="metric-card"
-        :style="{ borderLeftWidth: '4px', borderLeftColor: card.borderColor }"
+        class="stat-card"
+        :class="card.borderClass"
       >
-        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 10px">
-          <span style="font-size: 18px">{{ card.emoji }}</span>
-          <span style="font-size: 13px; color: var(--text-secondary)">{{ card.label }}</span>
-        </div>
-        <div style="display: flex; align-items: baseline; gap: 4px">
-          <span style="font-size: 32px; font-weight: 700; color: var(--text-primary)">{{ card.value }}</span>
-          <span style="font-size: 14px; color: var(--text-muted)">{{ card.unit }}</span>
-        </div>
-        <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px">{{ card.note }}</div>
+        <div class="stat-label">{{ card.emoji }} {{ card.label }}</div>
+        <div class="stat-value">{{ card.value }}<span class="stat-unit">{{ card.unit }}</span></div>
+        <div class="stat-note">{{ card.note }}</div>
       </div>
     </div>
 
-    <!-- 图表区域 -->
-    <div class="charts-row">
-      <!-- 折线图 -->
+    <!-- 图表区域 flex两列 -->
+    <div class="yield-charts">
       <div class="chart-card">
-        <h2 class="section-title">预测逐日产量</h2>
-        <VChart :option="yieldCurveOption" class="echarts-container" style="height: 320px" />
+        <h3 class="section-title">预测逐日产量</h3>
+        <div class="chart-container" style="height: 300px">
+          <VChart :option="yieldCurveOption()" class="echarts-container" style="height: 300px" />
+        </div>
       </div>
-      <!-- 环形图 -->
       <div class="chart-card">
-        <h2 class="section-title">第一/二茬占比</h2>
-        <VChart :option="donutChartOption" class="echarts-container" style="height: 320px" />
+        <h3 class="section-title">第一/二茬占比</h3>
+        <div class="donut-chart-container">
+          <VChart :option="donutChartOption()" class="echarts-container" style="height: 240px" />
+          <div class="donut-legend">
+            <div class="donut-legend-item">
+              <div class="legend-color red"></div>
+              <span>第一茬 19.2 t/ha (60%)</span>
+            </div>
+            <div class="donut-legend-item">
+              <div class="legend-color yellow"></div>
+              <span>第二茬 12.8 t/ha (40%)</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- 详细预测表格 -->
-    <div class="section-block">
-      <h2 class="section-title">详细预测数据</h2>
+    <div class="timeline-section">
+      <h3 class="section-title">详细预测</h3>
       <div style="overflow-x: auto">
         <table class="data-table">
           <thead>
             <tr>
-              <th>时段</th>
-              <th>周次</th>
-              <th>日均产量 (kg/ha)</th>
-              <th>累计产量 (kg/ha)</th>
-              <th>平均果重 (g)</th>
-              <th>可溶性固形物 (%)</th>
+              <th>指标</th>
+              <th>预测值</th>
+              <th>说明</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in yieldDetails" :key="row.period">
-              <td>{{ row.period }}</td>
-              <td>{{ row.week }}</td>
-              <td>{{ row.yieldPerDay }}</td>
-              <td>{{ row.cumulative.toLocaleString() }}</td>
-              <td>{{ row.fruitWeight }}</td>
-              <td>{{ row.ssc }}</td>
+            <tr v-for="row in yieldDetails" :key="row.metric">
+              <td>{{ row.metric }}</td>
+              <td>{{ row.value }}</td>
+              <td>{{ row.note }}</td>
             </tr>
           </tbody>
         </table>
@@ -137,29 +113,65 @@ const yieldDetails = [
   max-width: 1100px;
 }
 
-/* 指标卡片行 */
-.metric-cards-row {
+.page-header {
+  margin-bottom: 24px;
+}
+
+/* 4个指标卡片 flex一行 */
+.yield-stats {
   display: flex;
   gap: 16px;
   margin-bottom: 28px;
 }
 
-.metric-card {
+.stat-card {
   flex: 1;
   background: var(--bg-card);
   border-radius: 12px;
   border: 1px solid var(--border-color);
   padding: 20px;
+  border-left: 4px solid transparent;
   transition: all 0.2s;
 }
 
-.metric-card:hover {
+.stat-card:hover {
   border-color: var(--border-light);
   box-shadow: var(--shadow);
 }
 
-/* 图表区域 */
-.charts-row {
+.stat-card.green-border { border-left-color: var(--accent-green); }
+.stat-card.blue-border { border-left-color: var(--accent-blue); }
+.stat-card.orange-border { border-left-color: var(--accent-orange); }
+.stat-card.purple-border { border-left-color: #8B5CF6; }
+
+.stat-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.stat-unit {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+.stat-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+/* 图表区域 flex两列 */
+.yield-charts {
   display: flex;
   gap: 16px;
   margin-bottom: 20px;
@@ -173,8 +185,44 @@ const yieldDetails = [
   padding: 20px;
 }
 
+.chart-container {
+  width: 100%;
+}
+
+/* 环形图容器 */
+.donut-chart-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.donut-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legend-color.red { background-color: var(--accent-red); }
+.legend-color.yellow { background-color: var(--accent-yellow); }
+
 /* 区块 */
-.section-block {
+.timeline-section {
   background: var(--bg-card);
   border-radius: 12px;
   border: 1px solid var(--border-color);

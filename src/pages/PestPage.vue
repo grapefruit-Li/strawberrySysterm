@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useSimulationStore } from '@/stores/simulation'
 import { useConfigStore } from '@/stores/config'
 import { useChart } from '@/composables/useChart'
@@ -11,131 +10,96 @@ const { riskIndexOption } = useChart()
 
 /* 风险卡片数据 */
 const pestRisks = [
-  {
-    emoji: '🍄',
-    name: '灰霉病',
-    topColor: '#8B5CF6',
-    highRiskPeriod: '11月-1月',
-    trigger: '低温高湿，相对湿度>85%',
-  },
-  {
-    emoji: '🐛',
-    name: '蚜虫',
-    topColor: 'var(--accent-orange)',
-    highRiskPeriod: '2月-3月',
-    trigger: '气温回升，新梢萌发期',
-  },
-  {
-    emoji: '🕷️',
-    name: '红蜘蛛',
-    topColor: 'var(--accent-green)',
-    highRiskPeriod: '2月-3月',
-    trigger: '干旱少雨，气温>20°C',
-  },
-  {
-    emoji: '🦠',
-    name: '白粉病',
-    topColor: '#EC4899',
-    highRiskPeriod: '1月-3月',
-    trigger: '昼夜温差大，通风不良',
-  },
+  { icon: '🦠', name: '灰霉病', dateRange: '11/2~2/22', note: '开花-采收-高湿易发', colorClass: 'purple' },
+  { icon: '🐛', name: '蚜虫', dateRange: '9/30~11/2', note: '定植后立即防控', colorClass: 'orange' },
+  { icon: '🕷️', name: '红蜘蛛', dateRange: '12/30~2/22', note: '气温回升-干燥高发', colorClass: 'green' },
+  { icon: '🍄', name: '白粉病', dateRange: '11/2~1/19', note: '昼夜温差大', colorClass: 'pink' },
+]
+
+/* 图例数据 */
+const chartLegends = [
+  { color: '#6b7280', label: '灰霉病' },
+  { color: '#22c55e', label: '白粉病' },
+  { color: '#eab308', label: '红蜘蛛' },
+  { color: '#f97316', label: '蚜虫' },
 ]
 
 /* 防治方案表格数据 */
 const controlPlans = [
-  { stage: '定植期', pest: '综合预防', measure: '种苗消毒，50%多菌灵800倍液浸根', method: '浸根', timing: '定植前1天' },
-  { stage: '营养生长期', pest: '蚜虫', measure: '10%吡虫啉可湿性粉剂2000倍液', method: '喷雾', timing: '发现即治' },
-  { stage: '花芽分化期', pest: '灰霉病', measure: '50%速克灵1500倍液', method: '喷雾', timing: '11月中旬预防' },
-  { stage: '开花期', pest: '灰霉病', measure: '降低湿度，通风换气', method: '农艺措施', timing: '持续' },
-  { stage: '结果期', pest: '红蜘蛛', measure: '1.8%阿维菌素3000倍液', method: '喷雾', timing: '2月初预防' },
-  { stage: '采收期', pest: '白粉病', measure: '25%三唑酮1500倍液', method: '喷雾', timing: '发病初期' },
+  { pest: '🐛 蚜虫', period: '9/30~11/2', threshold: '>5头/叶', drug: '吡虫啉·螺虫乙酯' },
+  { pest: '🕷️ 二斑叶螨', period: '12/30~2/22', threshold: '>3头/叶', drug: '丁醚脲·联苯肼酯' },
+  { pest: '🪲 西花蓟马', period: '9/30~11/20', threshold: '>8头/花', drug: '乙基多杀菌素' },
+  { pest: '🦠 灰霉病', period: '11/2~2/22', threshold: '开花期预防', drug: '嘧霉胺·异菌脲' },
+  { pest: '🍄 白粉病', period: '11/2~1/19', threshold: '烧叶预防', drug: '醚菌酯·硫磺' },
+  { pest: '⚫ 炭疽病', period: '9/30~11/2', threshold: '苗期预防', drug: '咪鲜胺·代森锰锌' },
 ]
 
 /* IPM核心原则 */
 const ipmPrinciples = [
-  {
-    num: 1,
-    title: '预防为主',
-    desc: '优先采用农业防治和物理防治，创造不利于病虫害发生的环境条件',
-  },
-  {
-    num: 2,
-    title: '综合防治',
-    desc: '协调运用农业、物理、生物和化学防治手段，减少单一依赖化学农药',
-  },
-  {
-    num: 3,
-    title: '精准施药',
-    desc: '基于监测预警数据，在最佳防治窗口期精准施药，提高防治效果',
-  },
-  {
-    num: 4,
-    title: '安全间隔',
-    desc: '严格遵守农药安全间隔期，确保采收时农药残留符合标准',
-  },
+  { num: '①', title: '监测', desc: '黄板20+蓝板10块/亩 每周调查' },
+  { num: '②', title: '生防', desc: '智利小植绥螨防红蜘蛛' },
+  { num: '③', title: '化防', desc: '花期避用高毒药' },
+  { num: '④', title: '栽培', desc: '棚下滴灌降温' },
 ]
 </script>
 
 <template>
   <div class="pest-page">
-    <!-- 页面标题 -->
-    <div style="margin-bottom: 24px">
-      <h1 class="page-title">植保 IPM</h1>
+    <div class="page-header">
+      <h2 class="page-title">植保 IPM</h2>
       <p class="page-subtitle">基于物候期的综合病虫害防治方案 · 112天风险期</p>
     </div>
 
-    <!-- 4个风险卡片 -->
-    <div class="risk-cards-row">
+    <!-- 4个风险卡片 flex一行 -->
+    <div class="ipm-risk-cards">
       <div
         v-for="risk in pestRisks"
         :key="risk.name"
-        class="risk-card"
+        class="ipm-risk-card"
+        :class="risk.colorClass"
       >
-        <div class="risk-top" :style="{ backgroundColor: risk.topColor }"></div>
-        <div class="risk-body">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px">
-            <span style="font-size: 20px">{{ risk.emoji }}</span>
-            <span style="font-size: 14px; font-weight: 600; color: var(--text-primary)">{{ risk.name }}</span>
-          </div>
-          <div style="margin-bottom: 6px">
-            <span style="font-size: 11px; color: var(--text-muted)">高风险期：</span>
-            <span style="font-size: 13px; color: var(--accent-orange); font-weight: 500">{{ risk.highRiskPeriod }}</span>
-          </div>
-          <div>
-            <span style="font-size: 11px; color: var(--text-muted)">触发条件：</span>
-            <span style="font-size: 12px; color: var(--text-secondary)">{{ risk.trigger }}</span>
-          </div>
+        <div class="risk-card-header">
+          <span class="risk-icon">{{ risk.icon }}</span>
+          <span class="risk-name">{{ risk.name }}</span>
         </div>
+        <div class="risk-card-date">{{ risk.dateRange }}</div>
+        <div class="risk-card-note">{{ risk.note }}</div>
       </div>
     </div>
 
     <!-- 月度风险指数图表 -->
-    <div class="section-block">
-      <h2 class="section-title">月度风险指数</h2>
-      <VChart :option="riskIndexOption" class="echarts-container" style="height: 320px" />
+    <div class="timeline-section">
+      <h3 class="section-title">月度病虫害风险指数</h3>
+      <div class="chart-legend">
+        <div v-for="legend in chartLegends" :key="legend.label" class="legend-item">
+          <div class="legend-color" :style="{ backgroundColor: legend.color }"></div>
+          <span>{{ legend.label }}</span>
+        </div>
+      </div>
+      <div class="chart-container" style="height: 300px">
+        <VChart :option="riskIndexOption()" class="echarts-container" style="height: 300px" />
+      </div>
     </div>
 
     <!-- 防治方案表格 -->
-    <div class="section-block">
-      <h2 class="section-title">防治方案</h2>
+    <div class="timeline-section">
+      <h3 class="section-title">防治方案</h3>
       <div style="overflow-x: auto">
         <table class="data-table">
           <thead>
             <tr>
-              <th>生育阶段</th>
-              <th>目标病虫害</th>
-              <th>防治措施</th>
-              <th>施药方式</th>
-              <th>时机</th>
+              <th>病虫害</th>
+              <th>高发期</th>
+              <th>阈值</th>
+              <th>推荐药剂</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="plan in controlPlans" :key="plan.stage + plan.pest">
-              <td>{{ plan.stage }}</td>
+            <tr v-for="plan in controlPlans" :key="plan.pest">
               <td>{{ plan.pest }}</td>
-              <td>{{ plan.measure }}</td>
-              <td>{{ plan.method }}</td>
-              <td>{{ plan.timing }}</td>
+              <td>{{ plan.period }}</td>
+              <td>{{ plan.threshold }}</td>
+              <td>{{ plan.drug }}</td>
             </tr>
           </tbody>
         </table>
@@ -143,22 +107,18 @@ const ipmPrinciples = [
     </div>
 
     <!-- IPM核心原则 -->
-    <div class="section-block">
-      <h2 class="section-title">IPM 核心原则</h2>
-      <div class="principles-grid">
+    <div class="ipm-principles">
+      <h3 class="section-title">IPM 核心</h3>
+      <div class="principles-list">
         <div
           v-for="principle in ipmPrinciples"
           :key="principle.num"
           class="principle-item"
         >
-          <div class="principle-num">{{ principle.num }}</div>
+          <span class="principle-number">{{ principle.num }}</span>
           <div class="principle-content">
-            <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px">
-              {{ principle.title }}
-            </div>
-            <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.6">
-              {{ principle.desc }}
-            </div>
+            <span class="principle-title">{{ principle.title }}</span>
+            <span class="principle-desc">{{ principle.desc }}</span>
           </div>
         </div>
       </div>
@@ -171,37 +131,68 @@ const ipmPrinciples = [
   max-width: 1100px;
 }
 
-/* 风险卡片行 */
-.risk-cards-row {
+.page-header {
+  margin-bottom: 24px;
+}
+
+/* 4个风险卡片 flex一行 */
+.ipm-risk-cards {
   display: flex;
   gap: 16px;
   margin-bottom: 28px;
 }
 
-.risk-card {
+.ipm-risk-card {
   flex: 1;
   background: var(--bg-card);
   border-radius: 12px;
   border: 1px solid var(--border-color);
-  overflow: hidden;
+  padding: 20px;
   transition: all 0.2s;
+  border-top: 4px solid transparent;
 }
 
-.risk-card:hover {
+.ipm-risk-card:hover {
   border-color: var(--border-light);
   box-shadow: var(--shadow);
 }
 
-.risk-top {
-  height: 4px;
+.ipm-risk-card.purple { border-top-color: #8B5CF6; }
+.ipm-risk-card.orange { border-top-color: var(--accent-orange); }
+.ipm-risk-card.green { border-top-color: var(--accent-green); }
+.ipm-risk-card.pink { border-top-color: #EC4899; }
+
+.risk-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
-.risk-body {
-  padding: 16px;
+.risk-icon {
+  font-size: 20px;
+}
+
+.risk-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.risk-card-date {
+  font-size: 13px;
+  color: var(--accent-orange);
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.risk-card-note {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 /* 区块 */
-.section-block {
+.timeline-section {
   background: var(--bg-card);
   border-radius: 12px;
   border: 1px solid var(--border-color);
@@ -209,8 +200,41 @@ const ipmPrinciples = [
   margin-bottom: 20px;
 }
 
-/* IPM原则网格 */
-.principles-grid {
+/* 图例 */
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.chart-container {
+  width: 100%;
+}
+
+/* IPM核心原则 */
+.ipm-principles {
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.principles-list {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
@@ -223,23 +247,31 @@ const ipmPrinciples = [
   background: var(--bg-secondary);
   border-radius: 10px;
   border: 1px solid var(--border-color);
+  align-items: flex-start;
 }
 
-.principle-num {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--highlight-bg);
-  color: var(--accent-blue);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.principle-number {
   font-size: 16px;
   font-weight: 700;
+  color: var(--accent-blue);
   flex-shrink: 0;
 }
 
 .principle-content {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.principle-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.principle-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
 }
 </style>
