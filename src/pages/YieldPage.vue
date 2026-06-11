@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useSimulationStore } from '@/stores/simulation'
 import { useConfigStore } from '@/stores/config'
 import { useChart } from '@/composables/useChart'
@@ -8,41 +9,103 @@ const simStore = useSimulationStore()
 const configStore = useConfigStore()
 const { yieldCurveOption, donutChartOption } = useChart()
 
-/* 指标卡片数据 */
-const statCards = [
-  { emoji: '🍓', label: '鲜果总产', value: '32', unit: 't/ha', note: '≈ 7 g/株', borderClass: 'green-border' },
-  { emoji: '⚖️', label: '单果重', value: '22', unit: 'g', note: '一级果 ≥20g', borderClass: 'blue-border' },
-  { emoji: '📊', label: '第一茬占比', value: '60', unit: '%', note: '品质最佳期', borderClass: 'orange-border' },
-  { emoji: '📅', label: '采收天数', value: '80', unit: '天', note: '1/3 起', borderClass: 'purple-border' },
-]
+/* 是否有模拟结果 */
+const hasData = computed(() => simStore.results.length > 0 && simStore.yieldResult.totalFruitWeight > 0)
+
+/* 总产量 (t/ha) */
+const totalYield = computed(() => {
+  if (!hasData.value) return 0
+  return (simStore.yieldResult.totalFruitWeight / 1000).toFixed(0)
+})
+
+/* 平均单果重 (g) */
+const avgFruitWeight = computed(() => {
+  if (!hasData.value) return 0
+  return simStore.yieldResult.avgFruitWeight.toFixed(0)
+})
+
+/* 采收日期 */
+const harvestDate = computed(() => {
+  if (!hasData.value) return '-'
+  return simStore.yieldResult.harvestDate
+})
+
+/* 采收天数 */
+const harvestDays = computed(() => {
+  if (!hasData.value) return 0
+  const harvestResults = simStore.results.filter(r => r.fruitWeight > 0)
+  return harvestResults.length
+})
+
+/* 第一茬占比 */
+const firstFlushRatio = computed(() => {
+  const ratio = configStore.selectedCultivarFull?.firstFlushRatio
+  return ratio ? Math.round(ratio * 100) : 60
+})
+
+/* 指标卡片数据 - 从模拟结果派生 */
+const statCards = computed(() => {
+  if (!hasData.value) return []
+  return [
+    { emoji: '🍓', label: '鲜果总产', value: totalYield.value, unit: 't/ha', note: `≈ ${((simStore.yieldResult.totalFruitWeight / 1000) / (configStore.plantingDensity / 1000) * 1000).toFixed(0)} g/株`, borderClass: 'green-border' },
+    { emoji: '⚖️', label: '单果重', value: avgFruitWeight.value, unit: 'g', note: `一级果 ≥${configStore.selectedCultivarFull?.keyParams.avgFruitWeight ?? 20}g`, borderClass: 'blue-border' },
+    { emoji: '📊', label: '第一茬占比', value: String(firstFlushRatio.value), unit: '%', note: '品质最佳期', borderClass: 'orange-border' },
+    { emoji: '📅', label: '采收天数', value: String(harvestDays.value), unit: '天', note: harvestDate.value, borderClass: 'purple-border' },
+  ]
+})
 
 /* 环形图图例 */
-const donutLegends = [
-  { colorClass: 'red', label: '第一茬 19.2 t/ha (60%)' },
-  { colorClass: 'yellow', label: '第二茬 12.8 t/ha (40%)' },
-]
+const donutLegends = computed(() => {
+  if (!hasData.value) return []
+  const firstRatio = firstFlushRatio.value / 100
+  const secondRatio = 1 - firstRatio
+  const totalT = Number(totalYield.value)
+  return [
+    { colorClass: 'red', label: `第一茬 ${(totalT * firstRatio).toFixed(1)} t/ha (${firstFlushRatio.value}%)` },
+    { colorClass: 'yellow', label: `第二茬 ${(totalT * secondRatio).toFixed(1)} t/ha (${Math.round(secondRatio * 100)}%)` },
+  ]
+})
 
-/* 详细预测表格数据 */
-const yieldDetails = [
-  { metric: '鲜果总产 (t/ha)', value: '32', note: '—' },
-  { metric: '单株产量 (g)', value: '624', note: '密度 4.3 株/m²' },
-  { metric: '单果重 (g)', value: '22', note: '商品果标准' },
-  { metric: '果数/株', value: '28', note: '—' },
-  { metric: '果数/m²', value: '122', note: '—' },
-  { metric: '第一茬果 (t/ha)', value: '19.2', note: '约60%' },
-  { metric: '第二茬果 (t/ha)', value: '12.8', note: '约40%' },
-  { metric: '第一茬起始', value: '1/3', note: '定植后95天' },
-  { metric: '采收高峰', value: '1/18~2/22', note: '日产量最大' },
-]
+/* 详细预测表格数据 - 从模拟结果派生 */
+const yieldDetails = computed(() => {
+  if (!hasData.value) return []
+  const density = configStore.plantingDensity / 1000
+  const totalFruitKg = simStore.yieldResult.totalFruitWeight
+  const avgWeight = simStore.yieldResult.avgFruitWeight
+  const fruitCount = totalFruitKg / (avgWeight / 1000)
+  const perPlant = density > 0 ? totalFruitKg / density : 0
+  const fruitPerM2 = density > 0 ? fruitCount / density : 0
+  const fruitPerPlant = density > 0 ? fruitCount / density : 0
+  const firstRatio = firstFlushRatio.value / 100
+
+  return [
+    { metric: '鲜果总产 (t/ha)', value: totalYield.value, note: '—' },
+    { metric: '单株产量 (g)', value: perPlant.toFixed(0), note: `密度 ${density.toFixed(1)} 株/m²` },
+    { metric: '单果重 (g)', value: avgFruitWeight.value, note: '商品果标准' },
+    { metric: '果数/株', value: fruitPerPlant.toFixed(0), note: '—' },
+    { metric: '果数/m²', value: fruitPerM2.toFixed(0), note: '—' },
+    { metric: '第一茬果 (t/ha)', value: (Number(totalYield.value) * firstRatio).toFixed(1), note: `约${firstFlushRatio.value}%` },
+    { metric: '第二茬果 (t/ha)', value: (Number(totalYield.value) * (1 - firstRatio)).toFixed(1), note: `约${Math.round((1 - firstRatio) * 100)}%` },
+    { metric: '第一茬起始', value: harvestDate.value, note: '—' },
+    { metric: '采收高峰', value: '—', note: '日产量最大' },
+  ]
+})
 </script>
 
 <template>
   <div class="yield-page">
     <div class="page-header">
       <h2 class="page-title">🏆 产量预测</h2>
-      <p class="page-subtitle">预估 32 t/ha · 基于品种潜力和环境条件的产量预估</p>
+      <p class="page-subtitle" v-if="hasData">预估 {{ totalYield }} t/ha · 基于品种潜力和环境条件的产量预估</p>
+      <p class="page-subtitle" v-else>基于品种潜力和环境条件的产量预估</p>
     </div>
 
+    <!-- 无数据提示 -->
+    <div v-if="!hasData" class="timeline-section">
+      <p style="text-align:center;color:var(--text-muted);padding:20px 0;">💡 尚无模拟数据，请先在基础信息页生成年度种植方案</p>
+    </div>
+
+    <template v-else>
     <!-- 4个指标卡片 flex一行 -->
     <div class="yield-stats">
       <div
@@ -70,13 +133,9 @@ const yieldDetails = [
         <div class="donut-chart-container">
           <VChart :option="donutChartOption()" class="echarts-container" style="height: 240px" />
           <div class="donut-legend">
-            <div class="donut-legend-item">
-              <div class="legend-color red"></div>
-              <span>第一茬 19.2 t/ha (60%)</span>
-            </div>
-            <div class="donut-legend-item">
-              <div class="legend-color yellow"></div>
-              <span>第二茬 12.8 t/ha (40%)</span>
+            <div v-for="legend in donutLegends" :key="legend.label" class="donut-legend-item">
+              <div class="legend-color" :class="legend.colorClass"></div>
+              <span>{{ legend.label }}</span>
             </div>
           </div>
         </div>
@@ -105,6 +164,7 @@ const yieldDetails = [
         </table>
       </div>
     </div>
+    </template>
   </div>
 </template>
 

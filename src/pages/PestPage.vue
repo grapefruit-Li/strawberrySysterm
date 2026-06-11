@@ -1,28 +1,68 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useSimulationStore } from '@/stores/simulation'
 import { useConfigStore } from '@/stores/config'
 import { useChart } from '@/composables/useChart'
 import VChart from 'vue-echarts'
+import type { RiskLevel } from '@/engine/types'
 
 const simStore = useSimulationStore()
 const configStore = useConfigStore()
 const { riskIndexOption } = useChart()
 
-/* 风险卡片数据 */
-const pestRisks = [
-  { icon: '🦠', name: '灰霉病', dateRange: '11/2~2/22', note: '开花-采收-高湿易发', colorClass: 'purple' },
-  { icon: '🐛', name: '蚜虫', dateRange: '9/30~11/2', note: '定植后立即防控', colorClass: 'orange' },
-  { icon: '🕷️', name: '红蜘蛛', dateRange: '12/30~2/22', note: '气温回升-干燥高发', colorClass: 'green' },
-  { icon: '🍄', name: '白粉病', dateRange: '11/2~1/19', note: '昼夜温差大', colorClass: 'pink' },
-]
+/* 是否有模拟数据 */
+const hasData = computed(() => simStore.pestRisks.length > 0)
 
-/* 图例数据 */
-const chartLegends = [
-  { color: '#6b7280', label: '灰霉病' },
-  { color: '#22c55e', label: '白粉病' },
-  { color: '#eab308', label: '红蜘蛛' },
-  { color: '#f97316', label: '蚜虫' },
-]
+/* 风险等级对应的颜色类 */
+function riskColorClass(level: RiskLevel): string {
+  const map: Record<RiskLevel, string> = {
+    low: 'green',
+    medium: 'orange',
+    high: 'pink',
+    critical: 'purple',
+  }
+  return map[level] ?? 'green'
+}
+
+/* 风险等级对应的图标 */
+function riskIcon(name: string): string {
+  const iconMap: Record<string, string> = {
+    '灰霉病': '🦠',
+    '白粉病': '🍄',
+    '红蜘蛛': '🕷️',
+    '蚜虫': '🐛',
+    '炭疽病': '⚫',
+  }
+  return iconMap[name] ?? '🔬'
+}
+
+/* 风险卡片数据 - 从store获取 */
+const pestRisks = computed(() => {
+  if (!hasData.value) return []
+  return simStore.pestRisks.map(r => ({
+    icon: riskIcon(r.name),
+    name: r.name,
+    dateRange: r.relatedStage,
+    note: r.description,
+    colorClass: riskColorClass(r.riskLevel),
+  }))
+})
+
+/* 图例数据 - 从pest risk数据派生 */
+const chartLegends = computed(() => {
+  if (!hasData.value) return []
+  const colorMap: Record<string, string> = {
+    '灰霉病': '#6b7280',
+    '白粉病': '#22c55e',
+    '红蜘蛛': '#eab308',
+    '蚜虫': '#f97316',
+    '炭疽病': '#ef4444',
+  }
+  return simStore.pestRisks.map(r => ({
+    color: colorMap[r.name] ?? '#6b7280',
+    label: r.name,
+  }))
+})
 
 /* 防治方案表格数据 */
 const controlPlans = [
@@ -47,9 +87,15 @@ const ipmPrinciples = [
   <div class="pest-page">
     <div class="page-header">
       <h2 class="page-title">植保 IPM</h2>
-      <p class="page-subtitle">基于物候期的综合病虫害防治方案 · 112天风险期</p>
+      <p class="page-subtitle">基于物候期的综合病虫害防治方案</p>
     </div>
 
+    <!-- 无数据提示 -->
+    <div v-if="!hasData" class="timeline-section">
+      <p style="text-align:center;color:var(--text-muted);padding:20px 0;">💡 尚无模拟数据，请先在基础信息页生成年度种植方案</p>
+    </div>
+
+    <template v-else>
     <!-- 4个风险卡片 flex一行 -->
     <div class="ipm-risk-cards">
       <div
@@ -80,6 +126,7 @@ const ipmPrinciples = [
         <VChart :option="riskIndexOption()" class="echarts-container" style="height: 300px" />
       </div>
     </div>
+    </template>
 
     <!-- 防治方案表格 -->
     <div class="timeline-section">

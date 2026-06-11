@@ -1,9 +1,14 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useSimulationStore } from '@/stores/simulation'
 import { useConfigStore } from '@/stores/config'
+import type { OperationType, OperationPriority } from '@/engine/types'
 
 const simStore = useSimulationStore()
 const configStore = useConfigStore()
+
+/* 是否有模拟数据 */
+const hasData = computed(() => simStore.farmOperations.length > 0)
 
 /* 参数卡片数据 */
 const paramCards = [
@@ -16,20 +21,54 @@ const paramCards = [
 /* 月份标签 */
 const months = ['9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月']
 
-/* 操作卡片数据 */
-const operationCards = [
-  { period: '定植前9月初', stage: '整地起垄', stageClass: 'green', content: '深翻25-30cm，施有机肥2000kg+复合肥50kg，起垄宽60cm高25cm，沟宽30cm' },
-  { period: '9/30', stage: '定植', stageClass: 'light-green', content: '双行种植，密度4.3株/m²，定植后浇透水20mm，遮阳网覆盖3-5天' },
-  { period: '9/30-11/2', stage: '营养生长期', stageClass: 'light-green', content: '追施平衡肥，滴灌1次/天，叶面喷施0.2%磷酸二氢钾，及时摘除老叶' },
-  { period: '10/23-11/2', stage: '花芽分化期', stageClass: 'yellow', content: '控温控湿促进花芽分化，悬挂黄板20块+蓝板10块/亩监测虫害' },
-  { period: '11/2-11/20', stage: '开花坐果期', stageClass: 'yellow', content: '辅助授粉，喷施高钾肥，控制湿度60-70%，预防灰霉病' },
-  { period: '11/20-1/3', stage: '第一茬果管理', stageClass: 'orange', content: '滴灌1-2次/天，疏果留2-3个/花序，重点防治灰霉病、红蜘蛛' },
-  { period: '1/3-2/22', stage: '采收管理', stageClass: 'red', content: '早晨采收，果面80-90%着色，采后4°C预冷，及时补肥补水' },
-  { period: '1/18-2/22', stage: '采收高峰-第二茬', stageClass: 'red', content: '产量最高期，需肥量大，重点防治红蜘蛛，保持充足水肥供应' },
-  { period: '2/22', stage: '拉秧', stageClass: 'brown', content: '清洁田园，土壤消毒，设施维护保养，准备下一季生产' },
-]
+/* 操作类型对应的颜色类 */
+function stageClassFromType(type: OperationType): string {
+  const map: Record<OperationType, string> = {
+    irrigation: 'light-green',
+    fertilizer: 'yellow',
+    pruning: 'green',
+    pest_control: 'red',
+    harvest: 'orange',
+    planting: 'green',
+    monitoring: 'light-green',
+  }
+  return map[type] ?? 'green'
+}
 
-/* 灌溉施肥方案表格 */
+/* 优先级对应的标签 */
+function priorityLabel(priority: OperationPriority): string {
+  const map: Record<OperationPriority, string> = {
+    low: '低',
+    medium: '中',
+    high: '高',
+    urgent: '紧急',
+  }
+  return map[priority] ?? '中'
+}
+
+/* 操作卡片数据 - 从store获取 */
+const operationCards = computed(() => {
+  if (!hasData.value) return []
+  return simStore.farmOperations.map(op => ({
+    period: op.plannedDate,
+    stage: op.relatedStage,
+    stageClass: stageClassFromType(op.type),
+    content: `${priorityLabel(op.priority)} | ${op.description}`,
+  }))
+})
+
+/* 按生长阶段分组的操作 */
+const operationsByStage = computed(() => {
+  if (!hasData.value) return []
+  const groups: Record<string, typeof simStore.farmOperations> = {}
+  for (const op of simStore.farmOperations) {
+    if (!groups[op.relatedStage]) groups[op.relatedStage] = []
+    groups[op.relatedStage].push(op)
+  }
+  return Object.entries(groups).map(([stage, ops]) => ({ stage, ops }))
+})
+
+/* 灌溉施肥方案表格数据 */
 const irrigationFertilizerPlans = [
   { month: '9月', stage: '定植-缓苗', irrigation: '5-8mm', frequency: '1次/天', npk: '20-20-20', amount: '5kg×2' },
   { month: '9月', stage: '营养生长', irrigation: '5-8mm', frequency: '1次/天', npk: '20-20-20', amount: '5kg×2' },
@@ -44,7 +83,7 @@ const irrigationFertilizerPlans = [
   <div class="operations-page">
     <div class="page-header">
       <h2 class="page-title">🚜 农事操作</h2>
-      <p class="page-subtitle">161天方案 · 全生育期农事操作日历与执行标准</p>
+      <p class="page-subtitle">全生育期农事操作日历与执行标准</p>
     </div>
 
     <!-- 4个参数卡片 flex一行 -->
@@ -63,6 +102,12 @@ const irrigationFertilizerPlans = [
       </div>
     </div>
 
+    <!-- 无数据提示 -->
+    <div v-if="!hasData" class="timeline-section">
+      <p style="text-align:center;color:var(--text-muted);padding:20px 0;">💡 尚无模拟数据，请先在基础信息页生成年度种植方案</p>
+    </div>
+
+    <template v-else>
     <!-- 时间轴 -->
     <div class="timeline-section">
       <h3 class="section-title">农事操作时间线</h3>
@@ -85,7 +130,7 @@ const irrigationFertilizerPlans = [
     <div class="operations-cards">
       <div
         v-for="card in operationCards"
-        :key="card.stage"
+        :key="card.period + card.stage"
         class="ops-card"
       >
         <div class="ops-card-header">
@@ -95,6 +140,7 @@ const irrigationFertilizerPlans = [
         <div class="ops-card-content">{{ card.content }}</div>
       </div>
     </div>
+    </template>
 
     <!-- 灌溉施肥表格 -->
     <div class="timeline-section">

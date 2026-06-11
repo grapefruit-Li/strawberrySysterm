@@ -1,20 +1,22 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useConfigStore } from '@/stores/config'
 import { useSimulation } from '@/composables/useSimulation'
+import type { CultivarFullParams, RegionConfig } from '@/engine/types'
 
 const config = useConfigStore()
 const simulation = useSimulation()
 const router = useRouter()
 
-/* 品种选项 */
-const cultivarOptions = [
-  { value: 'radiance', label: 'Radiance (Florida主栽 短日型)', tags: ['短日型', 'Florida主栽'], traits: '果实大、硬度高、耐储运' },
-  { value: 'camarosa', label: 'Camarosa (加州品种)', tags: ['短日型', '加州品种'], traits: '果型均匀、风味佳' },
-  { value: 'sweet-charlie', label: 'Sweet Charlie (早熟品种)', tags: ['早熟型'], traits: '糖度高、早上市' },
-  { value: 'albion', label: 'Albion (日中性品种)', tags: ['日中性', '长季节'], traits: '连续结果、果硬耐运' },
-]
+/* 品种选项 - 从config store获取 */
+const cultivarOptions = computed(() => {
+  return config.cultivarList.map(c => ({
+    value: c.code,
+    label: `${c.name} (${c.origin} ${c.type})`,
+    cultivar: c,
+  }))
+})
 
 /* 秧苗状态选项 */
 const seedlingOptions = [
@@ -23,14 +25,14 @@ const seedlingOptions = [
   { value: 'weak', label: '弱苗, 2-3片展开叶' },
 ]
 
-/* 区域选项 */
-const regionOptions = [
-  { value: 'balm', label: 'Florida Balm (美国亚热带)', temp: '18g/℃/d', rain: '440mm' },
-  { value: 'california', label: 'California (地中海气候)', temp: '15g/℃/d', rain: '300mm' },
-  { value: 'shanghai', label: '上海 (亚热带季风)', temp: '16g/℃/d', rain: '500mm' },
-  { value: 'beijing', label: '北京 (温带季风)', temp: '14g/℃/d', rain: '400mm' },
-  { value: 'yunnan', label: '云南 (高原气候)', temp: '15g/℃/d', rain: '600mm' },
-]
+/* 区域选项 - 从config store获取 */
+const regionOptions = computed(() => {
+  return config.regionList.map(r => ({
+    value: r.id,
+    label: `${r.name} (${r.country} ${r.climateType})`,
+    region: r,
+  }))
+})
 
 /* 栽培模式选项 */
 const cultivationOptions = [
@@ -56,24 +58,45 @@ const soilFertilityOptions = [
 ]
 
 /* 当前选中 */
-const selectedCultivar = ref('radiance')
-const selectedSeedling = ref('strong')
-const selectedRegion = ref('balm')
-const selectedCultivation = ref('open-field')
-const selectedIrrigation = ref('drip-mulch')
-const selectedSoilFertility = ref('medium')
-const plantingDensity = ref(4.3)
-const plantingDate = ref('2026-09-30')
+const selectedCultivar = ref(config.selectedCultivar || 'FL-RADIANCE')
+const selectedSeedling = ref(config.seedlingQuality)
+const selectedRegion = ref(config.selectedRegion?.id || 'FL-BALM')
+const selectedCultivation = ref(config.cultivationMode)
+const selectedIrrigation = ref(config.irrigationMode)
+const selectedSoilFertility = ref(config.soilFertility)
+const plantingDensity = ref(config.plantingDensity / 1000 || 4.3)
+const plantingDate = ref(config.plantingDate)
 
 /* 当前品种信息 */
 const currentCultivar = computed(() => {
-  return cultivarOptions.find(c => c.value === selectedCultivar.value)
+  const opt = cultivarOptions.value.find(c => c.value === selectedCultivar.value)
+  return opt?.cultivar ?? null
 })
 
 /* 当前区域信息 */
 const currentRegion = computed(() => {
-  return regionOptions.find(r => r.value === selectedRegion.value)
+  const opt = regionOptions.value.find(r => r.value === selectedRegion.value)
+  return opt?.region ?? null
 })
+
+/* 品种标签 */
+const cultivarTags = computed(() => {
+  if (!currentCultivar.value) return []
+  const tags: string[] = [currentCultivar.value.type]
+  if (currentCultivar.value.origin) tags.push(currentCultivar.value.origin)
+  return tags
+})
+
+/* 品种特性描述 */
+const cultivarTraits = computed(() => {
+  return currentCultivar.value?.fruitDesc ?? ''
+})
+
+/* 同步管理选项到store */
+watch(selectedCultivation, (v) => { config.cultivationMode = v as any })
+watch(selectedIrrigation, (v) => { config.irrigationMode = v as any })
+watch(selectedSoilFertility, (v) => { config.soilFertility = v as any })
+watch(selectedSeedling, (v) => { config.seedlingQuality = v as any })
 
 /* 是否正在生成 */
 const generating = ref(false)
@@ -84,16 +107,24 @@ async function generatePlan() {
   // 同步配置到store
   config.plantingDate = plantingDate.value
   config.plantingDensity = Math.round(plantingDensity.value * 1000)
-  config.cultivarName = currentCultivar.value?.label || 'Radiance (Florida主栽 短日型)'
-  config.stationName = currentRegion.value?.label || 'Florida Balm (美国亚热带)'
+
+  // 设置品种
+  if (currentCultivar.value) {
+    config.setCultivarFull(currentCultivar.value)
+  }
+
+  // 设置区域
+  if (currentRegion.value) {
+    config.setRegion(currentRegion.value)
+  }
 
   // 加载预设数据
   if (config.weatherData.length === 0) {
     config.loadPreset()
   }
 
-  // 运行模拟
-  simulation.runFullSimulation()
+  // 运行链式模拟
+  simulation.runChainSimulation()
 
   generating.value = false
   // 跳转到物候方案页
@@ -123,11 +154,19 @@ async function generatePlan() {
         </div>
         <div v-if="currentCultivar" class="variety-info">
           <div class="variety-info-row">
-            <span v-for="tag in currentCultivar.tags" :key="tag" class="variety-tag">{{ tag }}</span>
+            <span v-for="tag in cultivarTags" :key="tag" class="variety-tag">{{ tag }}</span>
           </div>
           <div class="variety-info-row">
             <span class="variety-info-label">品种特性:</span>
-            <span class="variety-info-value">{{ currentCultivar.traits }}</span>
+            <span class="variety-info-value">{{ cultivarTraits }}</span>
+          </div>
+          <div v-if="currentCultivar.keyParams" class="variety-info-row">
+            <span class="variety-info-label">单果重:</span>
+            <span class="variety-info-value">{{ currentCultivar.keyParams.avgFruitWeight }}g</span>
+            <span class="variety-info-label" style="margin-left:8px">糖度:</span>
+            <span class="variety-info-value">{{ currentCultivar.keyParams.ssc }}%</span>
+            <span class="variety-info-label" style="margin-left:8px">硬度:</span>
+            <span class="variety-info-value">{{ currentCultivar.keyParams.firmness }}N</span>
           </div>
         </div>
       </div>
@@ -167,9 +206,9 @@ async function generatePlan() {
           </select>
         </div>
         <div v-if="currentRegion" class="climate-info">
-          <div class="climate-item"><span class="icon">🌡️</span><span>{{ currentRegion.label.split(' ')[0] }}: {{ currentRegion.temp }}</span></div>
+          <div class="climate-item"><span class="icon">🌡️</span><span>{{ currentRegion.name }}: {{ currentRegion.avgTemp }}°C</span></div>
           <div class="climate-divider"></div>
-          <div class="climate-item"><span class="icon">🌧️</span><span>降雨 {{ currentRegion.rain }}</span></div>
+          <div class="climate-item"><span class="icon">🌧️</span><span>降雨 {{ currentRegion.annualRain }}mm</span></div>
         </div>
       </div>
 
@@ -252,7 +291,7 @@ async function generatePlan() {
 
 <style scoped>
 .basic-info-page {
-  max-width: 960px;
+  max-width: 100%;
 }
 
 .page-header {

@@ -6,40 +6,112 @@ import { useConfigStore } from '@/stores/config'
 const simStore = useSimulationStore()
 const configStore = useConfigStore()
 
-/* 物候阶段数据 */
-const phenologyStages = [
-  { emoji: '🌱', name: '营养生长期', days: '33天', dateRange: '9/30 – 11/2', colorClass: 'green' },
-  { emoji: '🌸', name: '花芽分化-开花', days: '18天', dateRange: '11/2 – 11/20', colorClass: 'pink' },
-  { emoji: '🍓', name: '第一茬果', days: '~80天', dateRange: '1/3 起', colorClass: 'orange' },
-  { emoji: '📦', name: '采收结束', days: '23周', dateRange: '3/10 (定植后161天)', colorClass: 'purple' },
-]
-
 /* 月份标签 */
 const months = ['9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月']
-
-/* 时间轴关键节点 */
-const timelineNodes = [
-  { num: '①', name: '定植', date: '9/30' },
-  { num: '②', name: '花芽分化', date: '11/2' },
-  { num: '③', name: '始花', date: '11/20' },
-  { num: '④', name: '坐果', date: '12/10' },
-  { num: '⑤', name: '第一茬采收', date: '1/3' },
-  { num: '⑥', name: '高峰', date: '2/5' },
-  { num: '⑦', name: '拉秧', date: '3/10' },
-]
-
-/* 各物候阶段参数表格数据 */
-const phenologyParams = [
-  { stage: '🌱 营养生长期', start: '9/30', end: '11/2', days: 33, avgTemp: 24, dayLength: 11.4 },
-  { stage: '🌸 花分化-开花', start: '11/2', end: '11/20', days: 18, avgTemp: 20, dayLength: 10.9 },
-  { stage: '🫧 果实发育', start: '11/20', end: '1/3', days: 44, avgTemp: 17, dayLength: 10.5 },
-  { stage: '🍓 采收高峰期', start: '1/18', end: '2/22', days: 35, avgTemp: 16, dayLength: 11.2 },
-  { stage: '📦 采收末期', start: '2/8', end: '2/22', days: 14, avgTemp: '—', dayLength: '—' },
-]
 
 /* 定植日期显示 */
 const plantingDateDisplay = computed(() => {
   return configStore.plantingDate || '9/30'
+})
+
+/* 是否有模拟数据 */
+const hasData = computed(() => simStore.phenologyEvents.length > 0)
+
+/* 格式化日期数字为 M/D 格式 */
+function formatDateShort(dateNum: number): string {
+  const s = String(dateNum)
+  const month = parseInt(s.slice(4, 6))
+  const day = parseInt(s.slice(6, 8))
+  return `${month}/${day}`
+}
+
+/* 物候阶段数据 - 从模拟结果派生 */
+const phenologyStages = computed(() => {
+  if (!hasData.value) return []
+  const stageEmojiMap: Record<string, { emoji: string; colorClass: string }> = {
+    '萌芽期': { emoji: '🌱', colorClass: 'green' },
+    '营养生长期': { emoji: '🌱', colorClass: 'green' },
+    '花芽分化期': { emoji: '🌸', colorClass: 'pink' },
+    '开花期': { emoji: '🌸', colorClass: 'pink' },
+    '结果期': { emoji: '🍓', colorClass: 'orange' },
+    '果实膨大期': { emoji: '🍓', colorClass: 'orange' },
+    '采收期': { emoji: '📦', colorClass: 'purple' },
+  }
+  return simStore.phenologyEvents.map(e => {
+    const meta = stageEmojiMap[e.name] ?? { emoji: '🌿', colorClass: 'green' }
+    return {
+      emoji: meta.emoji,
+      name: e.name,
+      days: `${e.duration}天`,
+      dateRange: `${formatDateShort(e.startDate)} – ${formatDateShort(e.endDate)}`,
+      colorClass: meta.colorClass,
+    }
+  })
+})
+
+/* 时间轴关键节点 - 从物候事件派生 */
+const timelineNodes = computed(() => {
+  if (!hasData.value) return []
+  const circledNums = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩']
+  return simStore.phenologyEvents.map((e, idx) => ({
+    num: circledNums[idx] ?? `${idx + 1}`,
+    name: e.name,
+    date: formatDateShort(e.startDate),
+  }))
+})
+
+/* 各物候阶段参数表格数据 - 从物候事件和模拟结果派生 */
+const phenologyParams = computed(() => {
+  if (!hasData.value) return []
+  return simStore.phenologyEvents.map(e => {
+    // 从模拟结果中获取该阶段的温度和日长数据
+    const stageResults = simStore.results.filter(r => {
+      const dateStr = r.date
+      const dateNum = parseInt(dateStr.replace(/-/g, ''))
+      return dateNum >= e.startDate && dateNum <= e.endDate
+    })
+    const avgTemp = stageResults.length > 0
+      ? Math.round(stageResults.reduce((s, r) => s + (r.tmax + r.tmin) / 2, 0) / stageResults.length)
+      : '—'
+    // 日长估算（简化：根据月份估算）
+    const startMonth = Math.floor((e.startDate % 10000) / 100)
+    const dayLengthMap: Record<number, number> = {
+      9: 12.2, 10: 11.4, 11: 10.8, 12: 10.4, 1: 10.5, 2: 11.0, 3: 11.8, 4: 12.8, 5: 13.5
+    }
+    const dayLength = dayLengthMap[startMonth] ?? '—'
+
+    const emojiMap: Record<string, string> = {
+      '萌芽期': '🌱', '营养生长期': '🌱', '花芽分化期': '🌸',
+      '开花期': '🌸', '结果期': '🫧', '果实膨大期': '🍓', '采收期': '📦',
+    }
+    return {
+      stage: `${emojiMap[e.name] ?? '🌿'} ${e.name}`,
+      start: formatDateShort(e.startDate),
+      end: formatDateShort(e.endDate),
+      days: e.duration,
+      avgTemp,
+      dayLength,
+    }
+  })
+})
+
+/* 时间轴段宽度计算 */
+const timelineSegments = computed(() => {
+  if (!hasData.value) return []
+  const totalDays = simStore.phenologyEvents.reduce((s, e) => s + e.duration, 0) || 1
+  const colorMap: Record<string, string> = {
+    '萌芽期': 'green', '营养生长期': 'green', '花芽分化期': 'yellow',
+    '开花期': 'yellow', '结果期': 'red', '果实膨大期': 'red', '采收期': 'red',
+  }
+  const emojiMap: Record<string, string> = {
+    '萌芽期': '🌱', '营养生长期': '🌱', '花芽分化期': '🌸',
+    '开花期': '🌸', '结果期': '🍓', '果实膨大期': '🍓', '采收期': '📦',
+  }
+  return simStore.phenologyEvents.map(e => ({
+    name: `${emojiMap[e.name] ?? ''} ${e.name} ${e.duration}天`,
+    width: Math.round((e.duration / totalDays) * 100),
+    colorClass: colorMap[e.name] ?? 'green',
+  }))
 })
 </script>
 
@@ -50,6 +122,12 @@ const plantingDateDisplay = computed(() => {
       <p class="page-subtitle">基于积温模型 + 光周期响应预测的全年物候时间轴 · {{ plantingDateDisplay }}定植</p>
     </div>
 
+    <!-- 无数据提示 -->
+    <div v-if="!hasData" class="phenology-note">
+      💡 尚无模拟数据，请先在基础信息页生成年度种植方案
+    </div>
+
+    <template v-else>
     <!-- 4个阶段卡片 flex一行 -->
     <div class="phenology-cards">
       <div
@@ -72,9 +150,13 @@ const plantingDateDisplay = computed(() => {
           <span v-for="month in months" :key="month">{{ month }}</span>
         </div>
         <div class="phenology-bar">
-          <div class="phenology-segment green" style="width: 23%;">🌱 营养生长 33天</div>
-          <div class="phenology-segment yellow" style="width: 11%;">🌸 花-花 18天</div>
-          <div class="phenology-segment red" style="width: 66%;">🍓 果实发育-采收 110天</div>
+          <div
+            v-for="(seg, idx) in timelineSegments"
+            :key="idx"
+            class="phenology-segment"
+            :class="seg.colorClass"
+            :style="{ width: seg.width + '%' }"
+          >{{ seg.name }}</div>
         </div>
       </div>
       <!-- 关键节点流程 -->
@@ -121,8 +203,9 @@ const plantingDateDisplay = computed(() => {
 
     <!-- 底部提示 -->
     <div class="phenology-note">
-      💡 Radiance 为露地栽培，短日照型，日长&lt;11.5hr触发花芽分化，预计定植后约 23 天进入花芽分化
+      💡 {{ configStore.selectedCultivarFull?.name ?? configStore.cultivarName }} 为{{ configStore.cultivationMode === 'greenhouse' ? '温室' : '露地' }}栽培，{{ configStore.selectedCultivarFull?.type ?? '短日型' }}，日长&lt;11.5hr触发花芽分化
     </div>
+    </template>
   </div>
 </template>
 

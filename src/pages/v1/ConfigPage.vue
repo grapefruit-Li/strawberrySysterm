@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useConfigStore } from '@/stores/config'
 import { useSimulationStore } from '@/stores/simulation'
+import { useSimulation } from '@/composables/useSimulation'
+import type { CultivarFullParams, RegionConfig } from '@/engine/types'
 import {
   CloudSun,
   Layers,
@@ -16,21 +18,57 @@ import {
 
 const config = useConfigStore()
 const simulation = useSimulationStore()
+const { runFullSimulation } = useSimulation()
 const router = useRouter()
 
 /* 当前激活的标签页 */
 const activeTab = ref<'weather' | 'soil' | 'cultivar' | 'management'>('weather')
+
+/* 品种下拉选中值（code） */
+const selectedCultivarCode = ref(config.selectedCultivar || '')
+
+/* 区域下拉选中值（id） */
+const selectedRegionId = ref(config.selectedRegion?.id || '')
+
+/* 种植密度本地值（株/m²），与 store 的 株/ha 换算 */
+const plantingDensityLocal = computed({
+  get: () => config.plantingDensity / 1000,
+  set: (val: number) => { config.plantingDensity = val * 1000 },
+})
 
 /* 加载预设数据 */
 onMounted(() => {
   if (config.weatherData.length === 0) {
     config.loadPreset()
   }
+  // 同步下拉框初始值
+  if (config.selectedCultivarFull) {
+    selectedCultivarCode.value = config.selectedCultivarFull.code
+  }
+  if (config.selectedRegion) {
+    selectedRegionId.value = config.selectedRegion.id
+  }
 })
+
+/* 选择品种 */
+function onCultivarSelect(code: string) {
+  const cultivar = config.cultivarList.find((c: CultivarFullParams) => c.code === code)
+  if (cultivar) {
+    config.setCultivarFull(cultivar)
+  }
+}
+
+/* 选择区域 */
+function onRegionSelect(id: string) {
+  const region = config.regionList.find((r: RegionConfig) => r.id === id)
+  if (region) {
+    config.setRegion(region)
+  }
+}
 
 /* 开始模拟 */
 function startSimulation() {
-  simulation.startSimulation()
+  runFullSimulation()
   router.push('/simulation')
 }
 </script>
@@ -80,6 +118,30 @@ function startSimulation() {
 
     <!-- 气象配置 -->
     <div v-if="activeTab === 'weather'" class="space-y-4">
+      <!-- 区域选择 -->
+      <div class="glass-card p-5">
+        <h3 class="text-sm font-semibold text-midnight-200 mb-4">区域选择</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs text-midnight-400 mb-1 block">种植区域</label>
+            <select v-model="selectedRegionId" class="input-field" @change="onRegionSelect(selectedRegionId)">
+              <option value="">请选择区域</option>
+              <option v-for="region in config.regionList" :key="region.id" :value="region.id">
+                {{ region.name }} ({{ region.country }})
+              </option>
+            </select>
+          </div>
+          <div v-if="config.selectedRegion" class="flex items-end">
+            <div class="text-xs text-midnight-400 space-y-1">
+              <p>气候类型：{{ config.selectedRegion.climateType }}</p>
+              <p>年平均温度：{{ config.selectedRegion.avgTemp }}°C</p>
+              <p>年降水量：{{ config.selectedRegion.annualRain }}mm</p>
+              <p>种植季：{{ config.selectedRegion.growingSeason }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 站点信息 -->
       <div class="glass-card p-5">
         <h3 class="text-sm font-semibold text-midnight-200 mb-4">站点信息</h3>
@@ -221,39 +283,58 @@ function startSimulation() {
     <!-- 品种配置 -->
     <div v-if="activeTab === 'cultivar'" class="space-y-4">
       <div class="glass-card p-5">
-        <h3 class="text-sm font-semibold text-midnight-200 mb-4">品种参数</h3>
+        <h3 class="text-sm font-semibold text-midnight-200 mb-4">品种选择</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="text-xs text-midnight-400 mb-1 block">品种名称</label>
-            <input v-model="config.cultivarName" class="input-field" />
+            <select v-model="selectedCultivarCode" class="input-field" @change="onCultivarSelect(selectedCultivarCode)">
+              <option value="">请选择品种</option>
+              <option v-for="c in config.cultivarList" :key="c.code" :value="c.code">
+                {{ c.name }} ({{ c.type }})
+              </option>
+            </select>
           </div>
+          <div v-if="config.selectedCultivarFull" class="flex items-end">
+            <div class="text-xs text-midnight-400 space-y-1">
+              <p>类型：{{ config.selectedCultivarFull.type }}</p>
+              <p>产地：{{ config.selectedCultivarFull.origin }}</p>
+              <p>果实描述：{{ config.selectedCultivarFull.fruitDesc }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 品种参数详情 -->
+      <div v-if="config.selectedCultivarFull" class="glass-card p-5">
+        <h3 class="text-sm font-semibold text-midnight-200 mb-4">品种参数 (DSSAT CROPGRO)</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="text-xs text-midnight-400 mb-1 block">出苗天数</label>
-            <input v-model.number="config.cultivarParams.emergenceDays" type="number" class="input-field" />
+            <input :value="config.cultivarParams.emergenceDays" type="number" class="input-field" readonly />
           </div>
           <div>
             <label class="text-xs text-midnight-400 mb-1 block">开花天数</label>
-            <input v-model.number="config.cultivarParams.floweringDays" type="number" class="input-field" />
+            <input :value="config.cultivarParams.floweringDays" type="number" class="input-field" readonly />
           </div>
           <div>
             <label class="text-xs text-midnight-400 mb-1 block">成熟天数</label>
-            <input v-model.number="config.cultivarParams.maturityDays" type="number" class="input-field" />
+            <input :value="config.cultivarParams.maturityDays" type="number" class="input-field" readonly />
           </div>
           <div>
             <label class="text-xs text-midnight-400 mb-1 block">最大LAI</label>
-            <input v-model.number="config.cultivarParams.maxLai" type="number" step="0.1" class="input-field" />
+            <input :value="config.cultivarParams.maxLai" type="number" step="0.1" class="input-field" readonly />
           </div>
           <div>
             <label class="text-xs text-midnight-400 mb-1 block">潜在果重 (g)</label>
-            <input v-model.number="config.cultivarParams.potentialFruitWeight" type="number" class="input-field" />
+            <input :value="config.cultivarParams.potentialFruitWeight" type="number" class="input-field" readonly />
           </div>
           <div>
             <label class="text-xs text-midnight-400 mb-1 block">目标可溶性固形物 (%)</label>
-            <input v-model.number="config.cultivarParams.sscTarget" type="number" step="0.1" class="input-field" />
+            <input :value="config.cultivarParams.sscTarget" type="number" step="0.1" class="input-field" readonly />
           </div>
           <div>
             <label class="text-xs text-midnight-400 mb-1 block">目标酸度 (%)</label>
-            <input v-model.number="config.cultivarParams.acidityTarget" type="number" step="0.1" class="input-field" />
+            <input :value="config.cultivarParams.acidityTarget" type="number" step="0.1" class="input-field" readonly />
           </div>
         </div>
       </div>
@@ -270,8 +351,8 @@ function startSimulation() {
             <input v-model="config.plantingDate" type="date" class="input-field" />
           </div>
           <div>
-            <label class="text-xs text-midnight-400 mb-1 block">种植密度 (株/ha)</label>
-            <input v-model.number="config.plantingDensity" type="number" class="input-field" />
+            <label class="text-xs text-midnight-400 mb-1 block">种植密度 (株/m²)</label>
+            <input v-model.number="plantingDensityLocal" type="number" step="0.1" class="input-field" />
           </div>
         </div>
       </div>

@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
-import { ref, reactive } from 'vue'
-import type { RegionConfig, CultivarFullParams } from '@/engine/types'
+import { ref, reactive, computed } from 'vue'
+import type { RegionConfig, CultivarFullParams, DailyWeather } from '@/engine/types'
+import { strawberryCultivars } from '@/data/cultivars/strawberry-cultivars'
+import { builtInRegions, generateWeather } from '@/data/regions/index'
 
 /* 气象数据接口 */
 export interface WeatherRecord {
@@ -43,57 +45,27 @@ export interface FertilizerEvent {
   kPct: number      // K含量 %
 }
 
-/* 内置区域列表 */
-const builtInRegions: RegionConfig[] = [
-  {
-    id: 'florida',
-    name: 'Florida',
-    country: '美国',
-    lat: 27.9,
-    lon: -82.3,
-    elevation: 15,
-    avgTemp: 22.5,
-    annualRain: 1300,
-    growingSeason: '10月-5月',
-    climateType: 'subtropical',
-  },
-  {
-    id: 'california',
-    name: 'California',
-    country: '美国',
-    lat: 36.7,
-    lon: -119.8,
-    elevation: 100,
-    avgTemp: 14.5,
-    annualRain: 400,
-    growingSeason: '10月-7月',
-    climateType: 'mediterranean',
-  },
-  {
-    id: 'shanghai',
-    name: '上海',
-    country: '中国',
-    lat: 31.2,
-    lon: 121.5,
-    elevation: 5,
-    avgTemp: 16.5,
-    annualRain: 1100,
-    growingSeason: '9月-5月',
-    climateType: 'subtropical-monsoon',
-  },
-  {
-    id: 'kunming',
-    name: '昆明',
-    country: '中国',
-    lat: 25.0,
-    lon: 102.7,
-    elevation: 1900,
-    avgTemp: 15.0,
-    annualRain: 1000,
-    growingSeason: '9月-5月',
-    climateType: 'subtropical-highland',
-  },
-]
+/** 将 DailyWeather[] 转换为 WeatherRecord[] */
+function convertWeatherData(daily: DailyWeather[]): WeatherRecord[] {
+  return daily.map(d => {
+    const dateStr = String(d.date)
+    const formatted = `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`
+    return {
+      date: formatted,
+      srad: d.srad,
+      tmax: d.tmax,
+      tmin: d.tmin,
+      rain: d.rain,
+      co2: 410,
+    }
+  })
+}
+
+/** 将日期字符串 (YYYY-MM-DD) 转换为数字 (YYYYMMDD) */
+function dateStrToNum(dateStr: string): number {
+  const parts = dateStr.split('-')
+  return parseInt(parts[0]) * 10000 + parseInt(parts[1]) * 100 + parseInt(parts[2])
+}
 
 /* 配置存储 */
 export const useConfigStore = defineStore('config', () => {
@@ -142,6 +114,18 @@ export const useConfigStore = defineStore('config', () => {
   const irrigationEvents = ref<IrrigationEvent[]>([])
   const fertilizerEvents = ref<FertilizerEvent[]>([])
 
+  /* V2 新增配置 */
+  const cultivationMode = ref<'open-field' | 'greenhouse' | 'high-tunnel' | 'vertical'>('open-field')
+  const irrigationMode = ref<'drip-mulch' | 'sprinkler' | 'flood' | 'rainfed'>('drip-mulch')
+  const soilFertility = ref<'low' | 'medium' | 'high'>('medium')
+  const seedlingQuality = ref<'strong' | 'medium' | 'weak'>('medium')
+
+  /* 计算属性：品种列表 */
+  const cultivarList = computed(() => strawberryCultivars)
+
+  /* 计算属性：区域列表 */
+  const regionList = computed(() => builtInRegions)
+
   /* 获取内置区域列表 */
   function getRegions(): RegionConfig[] {
     return builtInRegions
@@ -154,6 +138,10 @@ export const useConfigStore = defineStore('config', () => {
     stationLat.value = region.lat
     stationLon.value = region.lon
     stationElev.value = region.elevation
+    // 同时生成该区域的气象数据
+    const startDateNum = dateStrToNum(plantingDate.value)
+    const dailyWeather = generateWeather(region, startDateNum, simulationDays.value)
+    weatherData.value = convertWeatherData(dailyWeather)
   }
 
   /* 设置品种完整参数 */
@@ -161,52 +149,35 @@ export const useConfigStore = defineStore('config', () => {
     selectedCultivar.value = cultivar.code
     selectedCultivarFull.value = cultivar
     cultivarName.value = cultivar.name
+    // 从 DSSAT CROPGRO 参数填充简化参数（V1 兼容）
+    const tbase = cultivar.ecotypeParams.tbase
+    const topt = cultivar.ecotypeParams.topt
+    const avgDevTemp = (topt + tbase) / 2
+    cultivarParams.emergenceDays = Math.round(cultivar.cultivarParams.p1v / avgDevTemp)
+    cultivarParams.floweringDays = Math.round(cultivar.cultivarParams.p1r / avgDevTemp)
+    cultivarParams.maturityDays = Math.round((cultivar.cultivarParams.p3 + cultivar.cultivarParams.p4) / avgDevTemp)
     cultivarParams.maxLai = cultivar.cultivarParams.laimax
     cultivarParams.potentialFruitWeight = cultivar.keyParams.avgFruitWeight
     cultivarParams.sscTarget = cultivar.keyParams.ssc
+    cultivarParams.acidityTarget = 0.8 // 酸度使用默认值，DSSAT模型中由acidbase计算
   }
 
   /* 加载预设数据 */
   function loadPreset() {
-    // 根据定植日期和区域生成180天气象数据
-    const startDate = new Date(plantingDate.value)
-    const region = selectedRegion.value
-    const baseTavg = region?.avgTemp ?? 16
-    const baseAmp = region?.climateType === 'subtropical-highland' ? 8
-      : region?.climateType === 'mediterranean' ? 10
-      : region?.climateType === 'subtropical-monsoon' ? 9
-      : 8
+    // 使用 generateWeather 生成气象数据
+    const region = selectedRegion.value ?? builtInRegions[2] // 默认上海
+    const startDateNum = dateStrToNum(plantingDate.value)
+    const dailyWeather = generateWeather(region, startDateNum, simulationDays.value)
+    weatherData.value = convertWeatherData(dailyWeather)
 
-    const baseWeather: WeatherRecord[] = []
-    for (let i = 0; i < 180; i++) {
-      const d = new Date(startDate.getTime() + i * 86400000)
-      const dayOfYear = Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / 86400000)
-      // 正弦温度模型：基于年均温和年振幅
-      const tempOffset = baseAmp * Math.sin((dayOfYear - 80) / 365 * 2 * Math.PI)
-      const tavg = baseTavg + tempOffset
-      const diurnalRange = 8 + Math.random() * 4
-      const tmax = tavg + diurnalRange / 2
-      const tmin = tavg - diurnalRange / 2
-      // 降雨概率：根据气候类型调整
-      const rainProb = region?.climateType === 'mediterranean' ? 0.15
-        : region?.climateType === 'subtropical-monsoon' ? 0.35
-        : 0.25
-      const rain = Math.random() < rainProb ? Math.round(Math.random() * 25 * 10) / 10 : 0
-      // 太阳辐射：受降雨影响
-      const sradBase = 8 + 6 * Math.sin((dayOfYear - 80) / 365 * 2 * Math.PI)
-      const srad = rain > 0 ? sradBase * 0.5 : sradBase + Math.random() * 3
-
-      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      baseWeather.push({
-        date: dateStr,
-        srad: Math.round(srad * 10) / 10,
-        tmax: Math.round(tmax * 10) / 10,
-        tmin: Math.round(tmin * 10) / 10,
-        rain,
-        co2: 410,
-      })
+    // 如果尚未选择区域，设置默认区域
+    if (!selectedRegion.value) {
+      selectedRegion.value = region
+      stationName.value = region.name
+      stationLat.value = region.lat
+      stationLon.value = region.lon
+      stationElev.value = region.elevation
     }
-    weatherData.value = baseWeather
 
     // 预设土壤层
     soilLayers.value = [
@@ -315,6 +286,8 @@ export const useConfigStore = defineStore('config', () => {
     selectedRegion, selectedCultivar, selectedCultivarFull,
     plantingDate, plantingDensity, irrigationEvents, fertilizerEvents,
     cultivarSearch, cultivarTypeFilter, simulationDays,
+    cultivationMode, irrigationMode, soilFertility, seedlingQuality,
+    cultivarList, regionList,
     getRegions, setRegion, setCultivarFull, loadPreset,
     addSoilLayer, removeSoilLayer,
     addIrrigation, removeIrrigation, addFertilizer, removeFertilizer,

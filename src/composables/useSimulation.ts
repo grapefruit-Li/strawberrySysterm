@@ -96,9 +96,31 @@ export function useSimulation() {
     const srad = weatherDay?.srad ?? 12
     const rain = weatherDay?.rain ?? 0
 
-    // 品种参数
-    const tbase = 7 // 草莓基温
-    const laimax = configStore.cultivarParams.maxLai
+    // 品种参数 - 从configStore获取DSSAT CROPGRO参数
+    const cultivarParams = configStore.selectedCultivarFull?.cultivarParams
+    const ecotypeParams = configStore.selectedCultivarFull?.ecotypeParams
+
+    // 基温 - 使用ecotype参数，无则回退到默认值5
+    const tbase = ecotypeParams?.tbase ?? 5
+    // 最大LAI - 使用品种参数
+    const laimax = cultivarParams?.laimax ?? configStore.cultivarParams.maxLai
+    // 品种GDD阈值参数
+    const p1v = cultivarParams?.p1v ?? 320
+    const p1r = cultivarParams?.p1r ?? 300
+    const p3 = cultivarParams?.p3 ?? 230
+    const p4 = cultivarParams?.p4 ?? 320
+    // 品种光合与分配参数
+    const photosynmax = cultivarParams?.photosynmax ?? ecotypeParams?.photosynmax ?? 1.15
+    const partleaf = ecotypeParams?.partleaf ?? 0.35
+    const partstem = ecotypeParams?.partstem ?? 0.25
+    const partroot = ecotypeParams?.partroot ?? 0.15
+    const partfruit = ecotypeParams?.partfruit ?? 0.25
+    // 花序与果实参数
+    const flrinterval = cultivarParams?.flrinterval ?? 75
+    const maxfruitpertruss = cultivarParams?.maxfruitpertruss ?? 4
+    const fruitdm = cultivarParams?.fruitdm ?? 0.095
+    const hi = cultivarParams?.hi ?? 0.50
+
     const dailyTt = Math.max(0, tmean - tbase)
 
     // 初始化或继承上一状态
@@ -152,14 +174,25 @@ export function useSimulation() {
     // 更新累积热时间
     const gdd = prevPlant.gdd + dailyTt
 
-    // 确定生长阶段
+    // 确定生长阶段 - 基于品种GDD阈值参数
+    // Germinating: gdd < p1v * 0.15 (出苗)
+    // Vegetative: gdd < p1v + p1r (营养生长期)
+    // Flowering: gdd < p1v + p1r + p3 * 0.5 (花芽分化/开花)
+    // Fruiting: gdd < p1v + p1r + p3 (结果)
+    // Maturity: gdd < p1v + p1r + p3 + p4 * 0.5 (果实膨大)
+    // Harvest: gdd >= p1v + p1r + p3 + p4 * 0.5
+    const gddEmergence = p1v * 0.15
+    const gddVegEnd = p1v + p1r
+    const gddFlrStart = p1v + p1r + p3 * 0.5
+    const gddFruitSet = p1v + p1r + p3
+    const gddMaturity = p1v + p1r + p3 + p4 * 0.5
+
     let stage: GrowthStage = prevPlant.stage
-    if (gdd < 50) stage = GrowthStage.Germinating
-    else if (gdd < 200) stage = GrowthStage.Vegetative
-    else if (gdd < 500) stage = GrowthStage.Vegetative
-    else if (gdd < 700) stage = GrowthStage.Flowering
-    else if (gdd < 1000) stage = GrowthStage.Fruiting
-    else if (gdd < 1200) stage = GrowthStage.Maturity
+    if (gdd < gddEmergence) stage = GrowthStage.Germinating
+    else if (gdd < gddVegEnd) stage = GrowthStage.Vegetative
+    else if (gdd < gddFlrStart) stage = GrowthStage.Flowering
+    else if (gdd < gddFruitSet) stage = GrowthStage.Fruiting
+    else if (gdd < gddMaturity) stage = GrowthStage.Maturity
     else stage = GrowthStage.Harvest
 
     // 计算LAI增长
@@ -168,15 +201,15 @@ export function useSimulation() {
     const laiDecay = stage === GrowthStage.Harvest ? 0.02 : 0
     const lai = Math.min(laimax, Math.max(0.01, prevPlant.lai + laiRate - laiDecay))
 
-    // 计算生物量增长
-    const biomassIncrement = srad * 1.5 * (1 - Math.exp(-0.5 * lai)) * prevPlant.wStress * 0.001
+    // 计算生物量增长 - 使用品种的photosynmax参数
+    const biomassIncrement = srad * photosynmax * 1.2 * (1 - Math.exp(-0.5 * lai)) * prevPlant.wStress * 0.001
 
-    // 分配系数
+    // 分配系数 - 使用ecotype的partleaf/partstem/partroot/partfruit参数
     const isReproductive = stage >= GrowthStage.Flowering
-    const partLeaf = isReproductive ? 0.15 : 0.35
-    const partStem = isReproductive ? 0.15 : 0.25
-    const partFruit = isReproductive ? 0.55 : 0.0
-    const partRoot = isReproductive ? 0.10 : 0.20
+    const partLeaf = isReproductive ? partleaf * 0.4 : partleaf
+    const partStem = isReproductive ? partstem * 0.5 : partstem
+    const partFruit = isReproductive ? partfruit + (1 - partfruit) * 0.6 : 0.0
+    const partRoot = isReproductive ? partroot * 0.5 : partroot
 
     const biomass = prevPlant.biomass + biomassIncrement
     const leafWt = biomass * partLeaf
@@ -187,11 +220,15 @@ export function useSimulation() {
     // 根系生长
     const rootDepth = Math.min(60, prevPlant.rootDepth + 0.3 * Math.max(0, (tmean - tbase) / 20) * 0.1)
 
-    // 花序和果实数
+    // 花序和果实数 - 使用品种的flrinterval和maxfruitpertruss参数
+    const flrGddCounter = stage >= GrowthStage.Flowering
+      ? prevPlant.flrGddCounter + dailyTt
+      : prevPlant.flrGddCounter
+    const newTruss = flrGddCounter >= flrinterval ? 1 : 0
     const activeTrusses = stage >= GrowthStage.Flowering
-      ? prevPlant.activeTrusses + (stage === GrowthStage.Flowering ? 0.05 : 0)
+      ? prevPlant.activeTrusses + (stage === GrowthStage.Flowering ? 0.05 : 0) + newTruss
       : prevPlant.activeTrusses
-    const fruitNum = isReproductive ? Math.floor(activeTrusses * 3.5) : 0
+    const fruitNum = isReproductive ? Math.floor(activeTrusses * maxfruitpertruss) : 0
 
     // 水分平衡（简化）
     const dailyEt = Math.max(0.5, 3.0 * lai / laimax * (srad / 15))
@@ -235,7 +272,7 @@ export function useSimulation() {
       fruitNum,
       harvestedFreshWt: prevPlant.harvestedFreshWt,
       harvestedDryWt: prevPlant.harvestedDryWt,
-      flrGddCounter: prevPlant.flrGddCounter,
+      flrGddCounter: newTruss > 0 ? flrGddCounter - flrinterval : flrGddCounter,
       photoThermalAge: prevPlant.photoThermalAge + dailyTt,
       senescedLeaf: prevPlant.senescedLeaf,
     }
@@ -283,20 +320,22 @@ export function useSimulation() {
       plantN: newPlant.plantN,
     }
 
-    // 收获判断
+    // 收获判断 - 使用品种的fruitdm和品质参数
     let harvest: HarvestRecord | undefined
     if (stage === GrowthStage.Harvest && fruitNum > 0 && dayIndex % 7 === 0) {
-      const avgWeight = 22 * (0.7 + Math.random() * 0.3)
+      const avgWeight = (cultivarParams ? configStore.selectedCultivarFull!.keyParams.avgFruitWeight : 22) * (0.7 + Math.random() * 0.3)
       const density = configStore.plantingDensity / 1000
       const freshWt = fruitNum * avgWeight * density * 0.1
+      const sscBase = cultivarParams ? configStore.selectedCultivarFull!.keyParams.ssc : 8.5
+      const firmnessBase = cultivarParams ? configStore.selectedCultivarFull!.keyParams.firmness : 2.8
       harvest = {
         date: dateNum,
         freshWt: Math.round(freshWt * 10) / 10,
-        dryWt: Math.round(freshWt * 0.12 * 10) / 10,
+        dryWt: Math.round(freshWt * fruitdm * 10) / 10,
         fruitNum,
-        ssc: Math.round((7.5 + Math.random() * 2.5) * 10) / 10,
-        acidity: Math.round((6.0 + Math.random() * 3.0) * 10) / 10,
-        firmness: Math.round((2.0 + Math.random() * 1.5) * 100) / 100,
+        ssc: Math.round((sscBase + (Math.random() - 0.5) * 2) * 10) / 10,
+        acidity: Math.round((6.0 + (Math.random() - 0.5) * 3.0) * 10) / 10,
+        firmness: Math.round((firmnessBase + (Math.random() - 0.5) * 1.0) * 100) / 100,
       }
     }
 
@@ -307,6 +346,10 @@ export function useSimulation() {
    * 构建模拟摘要
    */
   function buildSummary(outputs: DailyOutput[], harvestList: HarvestRecord[]): SimulationSummary {
+    const cultivarParams = configStore.selectedCultivarFull?.cultivarParams
+    const fruitdm = cultivarParams?.fruitdm ?? 0.095
+    const hi = cultivarParams?.hi ?? 0.50
+
     const totalFruitFreshWt = harvestList.reduce((s, h) => s + h.freshWt, 0)
     const totalFruitDryWt = harvestList.reduce((s, h) => s + h.dryWt, 0)
     const totalFruitNum = harvestList.reduce((s, h) => s + h.fruitNum, 0)
@@ -315,11 +358,15 @@ export function useSimulation() {
     const totalRain = outputs.reduce((s, o) => s + o.rain, 0)
     const totalIrrig = outputs.reduce((s, o) => s + o.irrig, 0)
 
+    // 使用品种的hi验证收获指数，若实际值偏离过大则使用品种hi修正
+    const actualHI = (lastOutput?.biomass ?? 0) > 0 && lastOutput !== null ? totalFruitDryWt / lastOutput!.biomass : 0
+    const harvestIndex = actualHI > 0 ? actualHI : hi * (totalFruitFreshWt > 0 ? 1 : 0)
+
     return {
       totalBiomass: lastOutput?.biomass ?? 0,
       totalFruitFreshWt,
       totalFruitDryWt,
-      harvestIndex: (lastOutput?.biomass ?? 0) > 0 && lastOutput !== null ? totalFruitDryWt / lastOutput!.biomass : 0,
+      harvestIndex: Math.round(harvestIndex * 1000) / 1000,
       totalFruitNum,
       avgFruitFreshWt: totalFruitNum > 0 ? (totalFruitFreshWt / totalFruitNum) * 1000 : 0,
       avgSSC: harvestList.length > 0 ? harvestList.reduce((s, h) => s + h.ssc, 0) / harvestList.length : 0,
@@ -344,14 +391,30 @@ export function useSimulation() {
   function generatePhenologyEvents(outputs: DailyOutput[]): PhenologyEvent[] {
     if (outputs.length === 0) return []
 
-    /* 阶段定义 */
+    // 从品种参数推导GDD阈值
+    const cultivarParams = configStore.selectedCultivarFull?.cultivarParams
+    const ecotypeParams = configStore.selectedCultivarFull?.ecotypeParams
+    const p1v = cultivarParams?.p1v ?? 320
+    const p1r = cultivarParams?.p1r ?? 300
+    const p3 = cultivarParams?.p3 ?? 230
+    const p4 = cultivarParams?.p4 ?? 320
+    const tbase = ecotypeParams?.tbase ?? 5
+
+    const gddEmergence = p1v * 0.15
+    const gddVegEnd = p1v + p1r
+    const gddFlrStart = p1v + p1r + p3 * 0.5
+    const gddFruitSet = p1v + p1r + p3
+    const gddMaturity = p1v + p1r + p3 + p4 * 0.5
+    const gddHarvestEnd = p1v + p1r + p3 + p4
+
+    /* 阶段定义 - GDD范围从品种参数推导 */
     const stageDefs: { stage: GrowthStage; name: string; desc: string; env: string; gddRange: [number, number] }[] = [
-      { stage: GrowthStage.Germinating, name: '萌芽期', desc: '种子萌发至出苗', env: '温度>7°C，土壤湿润', gddRange: [0, 50] },
-      { stage: GrowthStage.Vegetative, name: '营养生长期', desc: '叶片和根系快速生长', env: '温度15-25°C，充足光照', gddRange: [50, 500] },
-      { stage: GrowthStage.Flowering, name: '花芽分化期', desc: '花芽分化至开花', env: '短日型需<12h日照，温度15-20°C', gddRange: [500, 700] },
-      { stage: GrowthStage.Fruiting, name: '结果期', desc: '授粉后果实发育', env: '温度18-25°C，适度灌溉', gddRange: [700, 1000] },
-      { stage: GrowthStage.Maturity, name: '果实膨大期', desc: '果实快速膨大，糖分积累', env: '充足光照，昼夜温差大', gddRange: [1000, 1200] },
-      { stage: GrowthStage.Harvest, name: '采收期', desc: '果实成熟采收', env: '避免过多水分，减少病害', gddRange: [1200, 2000] },
+      { stage: GrowthStage.Germinating, name: '萌芽期', desc: '种子萌发至出苗', env: `温度>${tbase}°C，土壤湿润`, gddRange: [0, gddEmergence] },
+      { stage: GrowthStage.Vegetative, name: '营养生长期', desc: '叶片和根系快速生长', env: `温度15-25°C，充足光照，基温${tbase}°C`, gddRange: [gddEmergence, gddVegEnd] },
+      { stage: GrowthStage.Flowering, name: '花芽分化期', desc: '花芽分化至开花', env: '短日型需<12h日照，温度15-20°C', gddRange: [gddVegEnd, gddFlrStart] },
+      { stage: GrowthStage.Fruiting, name: '结果期', desc: '授粉后果实发育', env: '温度18-25°C，适度灌溉', gddRange: [gddFlrStart, gddFruitSet] },
+      { stage: GrowthStage.Maturity, name: '果实膨大期', desc: '果实快速膨大，糖分积累', env: '充足光照，昼夜温差大', gddRange: [gddFruitSet, gddMaturity] },
+      { stage: GrowthStage.Harvest, name: '采收期', desc: '果实成熟采收', env: '避免过多水分，减少病害', gddRange: [gddMaturity, gddHarvestEnd] },
     ]
 
     const events: PhenologyEvent[] = []
@@ -438,16 +501,51 @@ export function useSimulation() {
     const risks: PestRiskRecord[] = []
 
     for (const tmpl of pestTemplates) {
-      /* 生成逐日风险指数 */
+      /* 生成逐日风险指数 - 基于实际气象条件 */
       const dailyRiskIndex = outputs.map(o => {
         const stageName = stageNameFromGrowthStage(o.stage)
         const isRelated = tmpl.relatedStages.includes(stageName)
-        let baseRisk = isRelated ? 30 + Math.random() * 40 : 5 + Math.random() * 15
-        if (o.tmax > 28 && o.rain > 5) baseRisk += 15
-        if (o.rain > 15) baseRisk += 10
+        const tmean = (o.tmax + o.tmin) / 2
+        const diurnalRange = o.tmax - o.tmin
+
+        let baseRisk = isRelated ? 15 : 3
+
+        // 根据病虫害类型和实际气象条件计算风险
+        if (tmpl.id === 'pest-01') {
+          // 灰霉病：高湿 + 适温15-22°C + 降雨
+          if (tmean >= 15 && tmean <= 22 && o.rain > 2) baseRisk += 30
+          if (o.rain > 10) baseRisk += 15
+          if (tmean > 25) baseRisk -= 10 // 高温抑制
+          if (isRelated) baseRisk += 10
+        } else if (tmpl.id === 'pest-02') {
+          // 白粉病：干燥 + 暖日 + 凉夜（温差大）
+          if (o.rain < 2 && diurnalRange > 10) baseRisk += 25
+          if (tmean >= 18 && tmean <= 25 && o.rain < 5) baseRisk += 15
+          if (o.rain > 10) baseRisk -= 15 // 降雨抑制
+          if (isRelated) baseRisk += 10
+        } else if (tmpl.id === 'pest-03') {
+          // 红蜘蛛：高温 + 干燥 (tmax > 28°C, 低雨)
+          if (o.tmax > 28 && o.rain < 2) baseRisk += 30
+          if (o.tmax > 32) baseRisk += 10
+          if (o.rain > 10) baseRisk -= 20 // 降雨冲刷
+          if (isRelated) baseRisk += 8
+        } else if (tmpl.id === 'pest-04') {
+          // 蚜虫：适温 + 新梢生长期
+          if (tmean >= 15 && tmean <= 25) baseRisk += 20
+          if (o.rain < 5) baseRisk += 10
+          if (o.tmax > 30) baseRisk -= 10 // 高温抑制
+          if (isRelated) baseRisk += 12
+        } else if (tmpl.id === 'pest-05') {
+          // 炭疽病：温暖 + 潮湿 (雨>10mm, tmax>25°C)
+          if (o.rain > 10 && o.tmax > 25) baseRisk += 30
+          if (o.rain > 20) baseRisk += 10
+          if (tmean < 20) baseRisk -= 10 // 低温抑制
+          if (isRelated) baseRisk += 10
+        }
+
         return {
           date: String(o.day),
-          index: Math.min(100, Math.round(baseRisk)),
+          index: Math.min(100, Math.max(0, Math.round(baseRisk))),
         }
       })
 
@@ -495,7 +593,12 @@ export function useSimulation() {
   function generateFarmOperations(outputs: DailyOutput[], events: PhenologyEvent[]): FarmOperation[] {
     const operations: FarmOperation[] = []
 
-    /* 根据物候阶段生成操作建议 */
+    // 获取品种类型信息
+    const cultivarType = configStore.selectedCultivarFull?.type ?? '短日型'
+    const cultivarName = configStore.selectedCultivarFull?.name ?? configStore.cultivarName
+    const isDayNeutral = cultivarType === '日中性'
+
+    /* 根据物候阶段生成操作建议 - 品种类型影响操作内容 */
     const stageOps: { stage: GrowthStage; ops: { type: OperationType; name: string; desc: string; priority: OperationPriority; params: Record<string, number | string> }[] }[] = [
       {
         stage: GrowthStage.Germinating,
@@ -510,6 +613,9 @@ export function useSimulation() {
           { type: 'fertilizer', name: '营养生长期追肥', desc: '促进叶片和根系发育，以氮肥为主', priority: 'high', params: { npk: '20-10-10', amount: 150 } },
           { type: 'irrigation', name: '常规灌溉', desc: '保持土壤适度湿润，避免积水', priority: 'medium', params: { amount: 20, interval: '5-7天' } },
           { type: 'pruning', name: '摘除老叶', desc: '摘除底部老叶和病叶，改善通风', priority: 'medium', params: { frequency: '每2周' } },
+          ...(isDayNeutral
+            ? [{ type: 'monitoring' as OperationType, name: '日中性品种花芽监测', desc: '日中性品种可连续开花，注意早期花芽发育', priority: 'medium' as OperationPriority, params: { target: '花芽分化' } }]
+            : [{ type: 'monitoring' as OperationType, name: '短日处理', desc: '短日型品种需确保日照时数<12h促进花芽分化', priority: 'high' as OperationPriority, params: { target: '日照时数<12h' } }]),
         ],
       },
       {
@@ -517,7 +623,7 @@ export function useSimulation() {
         ops: [
           { type: 'fertilizer', name: '花期追肥', desc: '增施磷钾肥促进花芽分化', priority: 'high', params: { npk: '10-30-20', amount: 100 } },
           { type: 'pest_control', name: '花期病虫害预防', desc: '预防灰霉病，降低棚内湿度', priority: 'high', params: { target: '灰霉病' } },
-          { type: 'monitoring', name: '花序监测', desc: '记录花序数量和发育状况', priority: 'medium', params: { target: '花序数' } },
+          { type: 'monitoring', name: '花序监测', desc: `记录${cultivarName}花序数量和发育状况`, priority: 'medium', params: { target: '花序数' } },
         ],
       },
       {
@@ -533,12 +639,15 @@ export function useSimulation() {
         ops: [
           { type: 'irrigation', name: '采收前控水', desc: '采收前适当减少灌溉，提高糖度', priority: 'medium', params: { amount: 15, note: '采收前3天减少' } },
           { type: 'monitoring', name: '成熟度监测', desc: '定期检测果实SSC和硬度', priority: 'high', params: { target: 'SSC>8%' } },
+          ...(isDayNeutral
+            ? [{ type: 'fertilizer' as OperationType, name: '连续采收营养补充', desc: '日中性品种连续结果，需持续补充营养维持植株活力', priority: 'high' as OperationPriority, params: { npk: '10-10-30', amount: 80 } }]
+            : []),
         ],
       },
       {
         stage: GrowthStage.Harvest,
         ops: [
-          { type: 'harvest', name: '采收操作', desc: '选择晴天上午采收，轻拿轻放', priority: 'urgent', params: { frequency: '每2-3天', method: '手工采摘' } },
+          { type: 'harvest', name: '采收操作', desc: '选择晴天上午采收，轻拿轻放', priority: 'urgent', params: { frequency: isDayNeutral ? '每2-3天' : '每3-5天', method: '手工采摘' } },
           { type: 'fertilizer', name: '采收期追肥', desc: '采收期持续补充营养，维持植株活力', priority: 'medium', params: { npk: '10-10-30', amount: 80 } },
           { type: 'pest_control', name: '采收期病虫害监控', desc: '采收期注意灰霉病和红蜘蛛', priority: 'high', params: { target: '灰霉病、红蜘蛛' } },
         ],
@@ -601,7 +710,7 @@ export function useSimulation() {
     // 将结果同步到store的results数组
     simStore.results = allOutputs.map(o => ({
       day: o.das,
-      date: String(o.day),
+      date: formatDateNum(o.day),
       growthStage: stageName(o.stage),
       lai: o.lai,
       totalBiomass: o.biomass,
@@ -679,7 +788,7 @@ export function useSimulation() {
     /* 同步到store */
     simStore.results = allOutputs.map(o => ({
       day: o.das,
-      date: String(o.day),
+      date: formatDateNum(o.day),
       growthStage: stageName(o.stage),
       lai: o.lai,
       totalBiomass: o.biomass,
@@ -741,7 +850,7 @@ export function useSimulation() {
       // 将结果推入store
       simStore.results.push({
         day: result.output.das,
-        date: String(result.output.day),
+        date: formatDateNum(result.output.day),
         growthStage: stageName(result.output.stage),
         lai: result.output.lai,
         totalBiomass: result.output.biomass,

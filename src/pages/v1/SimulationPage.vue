@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useSimulationStore } from '@/stores/simulation'
+import { useSimulation } from '@/composables/useSimulation'
 import { useChart } from '@/composables/useChart'
 import VChart from 'vue-echarts'
 import {
@@ -20,6 +21,7 @@ import {
 } from 'lucide-vue-next'
 
 const simulation = useSimulationStore()
+const { runFullSimulation, runStepByStep, stopStepByStep } = useSimulation()
 const { createLineChartOption, colors } = useChart()
 
 /* LAI 趋势图表选项 */
@@ -51,6 +53,25 @@ function getLogColor(type: string) {
     default: return 'text-blue-400'
   }
 }
+
+/* 开始/继续模拟 */
+function handleStart() {
+  if (simulation.status === 'idle') {
+    runFullSimulation()
+  } else if (simulation.status === 'paused') {
+    simulation.resumeSimulation()
+  }
+}
+
+/* 暂停模拟 */
+function handlePause() {
+  simulation.pauseSimulation()
+}
+
+/* 重置模拟 */
+function handleReset() {
+  simulation.resetSimulation()
+}
 </script>
 
 <template>
@@ -66,7 +87,7 @@ function getLogColor(type: string) {
           <button
             v-if="simulation.status === 'idle' || simulation.status === 'paused'"
             class="strawberry-btn flex items-center gap-2"
-            @click="simulation.status === 'idle' ? simulation.startSimulation() : simulation.resumeSimulation()"
+            @click="handleStart()"
           >
             <Play :size="16" />
             {{ simulation.status === 'idle' ? '开始' : '继续' }}
@@ -74,7 +95,7 @@ function getLogColor(type: string) {
           <button
             v-if="simulation.status === 'running'"
             class="ghost-btn flex items-center gap-2 border-amber-500/40 text-amber-400"
-            @click="simulation.pauseSimulation()"
+            @click="handlePause()"
           >
             <Pause :size="16" />
             暂停
@@ -82,7 +103,7 @@ function getLogColor(type: string) {
           <button
             v-if="simulation.status !== 'idle'"
             class="ghost-btn flex items-center gap-2"
-            @click="simulation.resetSimulation()"
+            @click="handleReset()"
           >
             <RotateCcw :size="16" />
             重置
